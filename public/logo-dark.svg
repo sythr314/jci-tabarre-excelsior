@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 370" role="img" aria-label="JCI Tabarre Excelsior">
+
+  <!-- Fond navy -->
+  <rect width="500" height="370" fill="#1B2355"/>
+
+  <!-- JCI Wordmark — blanc -->
+  <text
+    x="28" y="210"
+    font-family="Montserrat, 'Arial Black', Helvetica, sans-serif"
+    font-weight="900"
+    font-size="178"
+    fill="#ffffff"
+    letter-spacing="-6">JCI</text>
+
+  <!-- ═══════════════ ÉCUSSON ═══════════════ -->
+  <svg x="286" y="42" width="136" height="172" viewBox="0 0 136 172">
+    <defs>
+      <clipPath id="lh2">
+        <rect x="0" y="0" width="68" height="172"/>
+      </clipPath>
+      <clipPath id="rh2">
+        <rect x="68" y="0" width="68" height="172"/>
+      </clipPath>
+    </defs>
+
+    <!-- Anneau bleu gauche -->
+    <path
+      d="M 24,0 H 112 Q 136,0 136,24 V 96 Q 132,140 68,170 Q 4,140 0,96 V 24 Q 0,0 24,0 Z"
+      fill="#29ABE2"
+      clip-path="url(#lh2)"/>
+
+    <!-- Anneau teal droite -->
+    <path
+      d="M 24,0 H 112 Q 136,0 136,24 V 96 Q 132,140 68,170 Q 4,140 0,96 V 24 Q 0,0 24,0 Z"
+      fill="#5BC8BE"
+      clip-path="url(#rh2)"/>
+
+    <!-- Champ intérieur navy -->
+    <path
+      d="M 38,16 H 98 Q 118,16 118,36 V 93 Q 114,128 68,152 Q 22,128 18,93 V 36 Q 18,16 38,16 Z"
+      fill="#1B2355"/>
+
+    <!-- Contour blanc 1 -->
+    <path
+      d="M 42,20 H 94 Q 114,20 114,40 V 91 Q 110,124 68,148 Q 26,124 22,91 V 40 Q 22,20 42,20 Z"
+      fill="none" stroke="#ffffff" stroke-width="3"/>
+
+    <!-- Contour blanc 2 -->
+    <path
+      d="M 53,32 H 83 Q 102,32 102,51 V 87 Q 98,113 68,132 Q 38,113 34,87 V 51 Q 34,32 53,32 Z"
+      fill="none" stroke="#ffffff" stroke-width="3"/>
+
+    <!-- Flèche V -->
+    <path
+      d="M 24,78 L 68,150 L 112,78"
+      fill="none" stroke="#ffffff" stroke-width="3"
+      stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+
+  <!-- Marque ™ -->
+  <text
+    x="428" y="92"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="16"
+    fill="#aaaaaa">™</text>
+
+  <!-- Tabarre -->
+  <text
+    x="28" y="278"
+    font-family="Montserrat, Arial, Helvetica, sans-serif"
+    font-weight="700"
+    font-size="44"
+    fill="#29ABE2">Tabarre</text>
+
+  <!-- Excelsior -->
+  <text
+    x="28" y="334"
+    font-family="Montserrat, Arial, Helvetica, sans-serif"
+    font-weight="700"
+    font-size="44"
+    fill="#29ABE2">Excelsior</text>
+
+</svg>
