@@ -33,9 +33,19 @@ export async function POST(req: NextRequest) {
   const safeSubject = escapeHtml(subject);
   const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
 
+  // Mode Démonstration : si l'API Resend n'est pas encore configurée
+  if (
+    !process.env.RESEND_API_KEY ||
+    process.env.RESEND_API_KEY.includes("placeholder") ||
+    !process.env.EMAIL_FROM
+  ) {
+    console.log("[DEMO MODE] Message de contact simulé avec succès de :", safeEmail);
+    return NextResponse.json({ success: true, demo: true });
+  }
+
   const { error } = await resend.emails.send({
-    from: process.env.EMAIL_FROM!,
-    to: process.env.EMAIL_TO!,
+    from: process.env.EMAIL_FROM,
+    to: process.env.EMAIL_TO || process.env.EMAIL_FROM,
     replyTo: email,
     subject: `[Contact JCI] ${subject}`,
     html: `

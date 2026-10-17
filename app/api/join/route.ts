@@ -44,6 +44,18 @@ export async function POST(req: NextRequest) {
 
   if (_honeypot) return NextResponse.json({ success: true });
 
+  // Mode Démonstration : si les API Supabase ou Resend ne sont pas encore configurées
+  const isDemo =
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
+    !process.env.RESEND_API_KEY ||
+    process.env.RESEND_API_KEY.includes("placeholder");
+
+  if (isDemo) {
+    console.log("[DEMO MODE] Candidature d'adhésion simulée avec succès pour :", email);
+    return NextResponse.json({ success: true, demo: true });
+  }
+
   // Persister la candidature en base (service role bypasse RLS)
   const supabase = createServiceClient();
   const { error: dbError } = await supabase.from("member_applications").insert({
