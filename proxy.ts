@@ -9,33 +9,62 @@ const MEMBER_INVITE = `${MEMBER_PREFIX}/invitation`;
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const response = NextResponse.next({ request });
 
-  // Ignorer les assets statiques
+  // Ignorer les assets statiques et les routes API (gérées individuellement)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/") ||
     pathname.includes(".")
   ) {
-    return response;
+    return NextResponse.next();
   }
 
+  // Préparer les en-têtes de requête en nettoyant les en-têtes sensibles pour éviter le spoofing
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete("x-admin-role");
+  requestHeaders.delete("x-member-id");
+  requestHeaders.set("x-pathname", pathname);
+
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder",
     {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+
+  // ─── PROTECTION SANITY STUDIO ───────────────────────────────
+  if (pathname.startsWith("/studio")) {
+    if (!user) {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
+    }
+    const { data: adminUser } = await supabase
+      .from("admin_users")
+      .select("role, is_active")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!adminUser || !adminUser.is_active) {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
+    }
+    return response;
+  }
 
   // ─── ROUTES ADMIN ──────────────────────────────────────────
   if (pathname.startsWith(ADMIN_PREFIX)) {
@@ -52,7 +81,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
     }
 
-    // Vérifier que l'utilisateur est bien un admin
+    // Vérifier que l'utilisateur est bien un admin actif
     const { data: adminUser } = await supabase
       .from("admin_users")
       .select("role, is_active")
@@ -64,8 +93,12 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
     }
 
-    // Injecter le rôle dans les headers pour les Server Components
-    response.headers.set("x-admin-role", adminUser.role);
+    requestHeaders.set("x-admin-role", adminUser.role);
+    response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
     return response;
   }
 
@@ -95,13 +128,20 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL(MEMBER_LOGIN, request.url));
     }
 
-    response.headers.set("x-member-id", member.id);
+    requestHeaders.set("x-member-id", member.id);
+    response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
     return response;
   }
 
   return response;
 }
 
+export default proxy;
+
 export const config = {
-  matcher: ["/ops-jci-htx/:path*", "/espace-membre/:path*"],
+  matcher: ["/ops-jci-htx/:path*", "/espace-membre/:path*", "/studio/:path*"],
 };
