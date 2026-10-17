@@ -5,6 +5,7 @@ import { CallToAction } from "@/components/sections/CallToAction";
 import { getTeamMembers, getPastPresidents } from "@/lib/sanity/queries/team";
 import { getPartners } from "@/lib/sanity/queries/partners";
 import { SanityImage } from "@/components/ui/SanityImage";
+import { safeUrl } from "@/lib/utils/security";
 
 export const metadata: Metadata = {
   title: "À propos",
@@ -161,10 +162,11 @@ export default async function AboutPage() {
                   </div>
                 );
 
-                return p.website ? (
+                const validWebsite = safeUrl(p.website);
+                return validWebsite ? (
                   <a
                     key={p._id}
-                    href={p.website}
+                    href={validWebsite}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Visiter le site de ${p.name}`}

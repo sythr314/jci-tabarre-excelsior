@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
+import { isValidUUID, escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -9,22 +10,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+  }
 
-  // Auth check
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  // Auth check avec is_active
+  const auth = await requireActiveAdmin(["president", "secretaire"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { admin } = auth;
 
   const service = createServiceClient();
-  const { data: admin } = await service
-    .from("admin_users")
-    .select("id, role, name")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!admin || !["president", "secretaire"].includes(admin.role)) {
-    return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
-  }
 
   // Récupérer la candidature
   const { data: application, error: fetchError } = await service
@@ -97,7 +94,7 @@ export async function POST(
     to: application.email,
     subject: "Votre candidature JCI a été acceptée — Activez votre compte",
     html: `
-      <h2 style="color:#1e3a8a;">Félicitations, ${application.first_name} !</h2>
+      <h2 style="color:#1e3a8a;">Félicitations, ${escapeHtml(application.first_name)} !</h2>
       <p>Votre candidature pour rejoindre <strong>JCI Tabarre Excelsior</strong> a été examinée et <strong>acceptée</strong>.</p>
       <p>Cliquez sur le bouton ci-dessous pour créer votre mot de passe et accéder à votre espace membre (lien valable 48h) :</p>
       <p style="margin:24px 0;">
@@ -126,7 +123,7 @@ export async function POST(
     target_type: "member_application",
     target_id:   id,
     details:     { email: application.email, member_id: member.id },
-    ip_address:  req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address:  getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true, memberId: member.id });

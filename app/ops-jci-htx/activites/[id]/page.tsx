@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
+import { safeUrl } from "@/lib/utils/security";
 import type { ActivityType, ActivityStatus } from "@/lib/supabase/types";
 import { ImportButton } from "./ImportButton";
 
@@ -127,17 +128,17 @@ export default async function ActiviteDetailPage({
                   </dd>
                 </div>
               )}
-              {act.registration_link && (
+              {safeUrl(act.registration_link) && (
                 <div className="col-span-2">
                   <dt className="text-gray-400">Lien d&apos;inscription</dt>
                   <dd className="mt-1">
                     <a
-                      href={act.registration_link}
+                      href={safeUrl(act.registration_link)!}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-cyan text-sm hover:underline break-all"
                     >
-                      {act.registration_link}
+                      {safeUrl(act.registration_link)}
                     </a>
                   </dd>
                 </div>

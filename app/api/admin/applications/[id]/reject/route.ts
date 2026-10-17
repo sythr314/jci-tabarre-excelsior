@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
+import { isValidUUID, escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
 import { Resend } from "resend";
 import { z } from "zod";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const schema = z.object({
-  notes: z.string().optional(),
+  notes: z.string().max(1000).optional(),
 });
 
 export async function POST(
@@ -14,25 +15,21 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
-  // Auth check
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const service = createServiceClient();
-  const { data: admin } = await service
-    .from("admin_users")
-    .select("id, role, name")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!admin || !["president", "secretaire"].includes(admin.role)) {
-    return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   }
+
+  // Auth check avec is_active
+  const auth = await requireActiveAdmin(["president", "secretaire"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { admin } = auth;
 
   const body = schema.safeParse(await req.json());
   if (!body.success) return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+
+  const service = createServiceClient();
 
   // Récupérer la candidature
   const { data: application, error: fetchError } = await service
@@ -54,16 +51,17 @@ export async function POST(
     review_notes: body.data.notes || null,
   }).eq("id", id);
 
-  // Email de notification au candidat
+  // Email de notification au candidat avec échappement HTML
+  const safeNotes = body.data.notes ? escapeHtml(body.data.notes) : "";
   await resend.emails.send({
     from: process.env.EMAIL_FROM!,
     to: application.email,
     subject: "Suite de votre candidature à JCI Tabarre Excelsior",
     html: `
-      <h2 style="color:#1e3a8a;">Bonjour ${application.first_name},</h2>
+      <h2 style="color:#1e3a8a;">Bonjour ${escapeHtml(application.first_name)},</h2>
       <p>Nous avons bien examiné votre candidature pour rejoindre <strong>JCI Tabarre Excelsior</strong>.</p>
       <p>Après examen, nous ne sommes malheureusement pas en mesure de donner suite à votre candidature pour le moment.</p>
-      ${body.data.notes ? `<p style="background:#f9fafb;border-left:3px solid #d1d5db;padding:10px 14px;color:#4b5563;">${body.data.notes}</p>` : ""}
+      ${safeNotes ? `<p style="background:#f9fafb;border-left:3px solid #d1d5db;padding:10px 14px;color:#4b5563;">${safeNotes}</p>` : ""}
       <p>Nous vous encourageons à rester en contact avec notre organisation et à postuler de nouveau lors d'une prochaine session d'admission.</p>
       <br />
       <p>Cordialement,</p>
@@ -78,7 +76,7 @@ export async function POST(
     target_type: "member_application",
     target_id:   id,
     details:     { email: application.email, notes: body.data.notes },
-    ip_address:  req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address:  getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
+import { isValidUUID, isValidSheetId, safeUrl, getTrustedClientIp } from "@/lib/utils/security";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -16,24 +17,19 @@ const updateSchema = z.object({
   registration_deadline: z.string().optional(),
 });
 
-async function getAdmin(userId: string) {
-  const service = createServiceClient();
-  const { data } = await service.from("admin_users").select("id, role").eq("user_id", userId).single();
-  return data;
-}
-
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+  }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const admin = await getAdmin(user.id);
-  if (!admin) return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
+  const auth = await requireActiveAdmin();
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   const service = createServiceClient();
   const { data: activity, error } = await service
@@ -58,24 +54,28 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const admin = await getAdmin(user.id);
-  if (!admin || !["president", "charge_formation"].includes(admin.role)) {
-    return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   }
+
+  const auth = await requireActiveAdmin(["president", "charge_formation"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { admin } = auth;
 
   const body = updateSchema.safeParse(await req.json());
   if (!body.success) {
     return NextResponse.json({ error: "Données invalides", details: body.error.flatten() }, { status: 400 });
   }
 
+  if (body.data.google_sheet_id && !isValidSheetId(body.data.google_sheet_id)) {
+    return NextResponse.json({ error: "Format d'ID Google Sheet invalide" }, { status: 400 });
+  }
+
   const payload = {
     ...body.data,
-    registration_link: body.data.registration_link || null,
+    registration_link: safeUrl(body.data.registration_link),
     google_sheet_id: body.data.google_sheet_id || null,
     registration_deadline: body.data.registration_deadline || null,
   };
@@ -86,7 +86,10 @@ export async function PUT(
     .update(payload)
     .eq("id", id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Activity update error:", error);
+    return NextResponse.json({ error: "Échec de la mise à jour de l'activité" }, { status: 500 });
+  }
 
   await service.from("audit_logs").insert({
     admin_id: admin.id,
@@ -94,7 +97,7 @@ export async function PUT(
     target_type: "activity",
     target_id: id,
     details: body.data,
-    ip_address: req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address: getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true });
@@ -105,20 +108,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const admin = await getAdmin(user.id);
-  if (!admin || admin.role !== "president") {
-    return NextResponse.json({ error: "Réservé au président" }, { status: 403 });
+  if (!isValidUUID(id)) {
+    return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   }
+
+  const auth = await requireActiveAdmin(["president"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { admin } = auth;
 
   const service = createServiceClient();
   const { error } = await service.from("activities").delete().eq("id", id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Activity delete error:", error);
+    return NextResponse.json({ error: "Échec de la suppression" }, { status: 500 });
+  }
 
   await service.from("audit_logs").insert({
     admin_id: admin.id,
@@ -126,7 +132,7 @@ export async function DELETE(
     target_type: "activity",
     target_id: id,
     details: {},
-    ip_address: req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address: getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true });

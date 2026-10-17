@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { MemberLogoutButton } from "./MemberLogoutButton";
@@ -15,6 +16,14 @@ const navLinks = [
 ];
 
 export default async function MemberLayout({ children }: { children: React.ReactNode }) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+
+  // Pages publiques de l'espace membre : pas de redirection ni de barre de navigation membre
+  if (pathname === "/espace-membre/connexion" || pathname.startsWith("/espace-membre/invitation")) {
+    return <>{children}</>;
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/espace-membre/connexion");

@@ -1,25 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
+import { isValidUUID, getTrustedClientIp } from "@/lib/utils/security";
+import { z } from "zod";
+
+const duesSchema = z.object({
+  year: z.number().int().min(2000).max(2100),
+});
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: memberId } = await params;
-
-  // Vérifier session admin
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const service = createServiceClient();
-  const { data: admin } = await service.from("admin_users").select("id, role").eq("user_id", user.id).single();
-  if (!admin || !["president", "secretaire"].includes(admin.role)) {
-    return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
+  if (!isValidUUID(memberId)) {
+    return NextResponse.json({ error: "Identifiant membre invalide" }, { status: 400 });
   }
 
-  const { year } = await req.json();
+  const auth = await requireActiveAdmin(["president", "secretaire"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { admin } = auth;
 
+  const body = duesSchema.safeParse(await req.json());
+  if (!body.success) {
+    return NextResponse.json({ error: "Année invalide" }, { status: 400 });
+  }
+  const { year } = body.data;
+
+  const service = createServiceClient();
   const { error } = await service.from("dues").upsert({
     member_id: memberId,
     year,
@@ -27,7 +36,10 @@ export async function POST(
     confirmed_by: admin.id,
   }, { onConflict: "member_id,year" });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Dues upsert error:", error);
+    return NextResponse.json({ error: "Échec de l'enregistrement de la cotisation" }, { status: 500 });
+  }
 
   // Audit log
   await service.from("audit_logs").insert({
@@ -36,7 +48,7 @@ export async function POST(
     target_type: "member",
     target_id: memberId,
     details: { year },
-    ip_address: req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address: getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true });

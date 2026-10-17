@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { sanitizePostgrestFilter } from "@/lib/utils/security";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { Member } from "@/lib/supabase/types";
@@ -27,7 +28,12 @@ export default async function MembresPage({
     .order("last_name");
 
   if (params.status && params.status !== "all") query = query.eq("status", params.status);
-  if (params.q) query = query.or(`first_name.ilike.%${params.q}%,last_name.ilike.%${params.q}%,email.ilike.%${params.q}%`);
+  if (params.q) {
+    const cleanQ = sanitizePostgrestFilter(params.q);
+    if (cleanQ.length > 0) {
+      query = query.or(`first_name.ilike.%${cleanQ}%,last_name.ilike.%${cleanQ}%,email.ilike.%${cleanQ}%`);
+    }
+  }
 
   const { data: members } = await query;
 

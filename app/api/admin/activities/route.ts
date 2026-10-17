@@ -27,19 +27,14 @@ function slugify(text: string): string {
     .replace(/-+/g, "-");
 }
 
-async function getAdmin(userId: string) {
-  const service = createServiceClient();
-  const { data } = await service.from("admin_users").select("id, role").eq("user_id", userId).single();
-  return data;
-}
+import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
+import { safeUrl, getTrustedClientIp } from "@/lib/utils/security";
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const admin = await getAdmin(user.id);
-  if (!admin) return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
+  const auth = await requireActiveAdmin();
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
 
   const service = createServiceClient();
   const { data, error } = await service
@@ -47,19 +42,19 @@ export async function GET() {
     .select("id, title, slug, type, activity_date, location, status, capacity, created_at")
     .order("activity_date", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Activities GET error:", error);
+    return NextResponse.json({ error: "Erreur lors de la récupération des activités" }, { status: 500 });
+  }
   return NextResponse.json(data ?? []);
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-
-  const admin = await getAdmin(user.id);
-  if (!admin || !["president", "charge_formation"].includes(admin.role)) {
-    return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
+  const auth = await requireActiveAdmin(["president", "charge_formation"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
+  const { admin } = auth;
 
   const body = createSchema.safeParse(await req.json());
   if (!body.success) {
@@ -80,13 +75,16 @@ export async function POST(req: NextRequest) {
       ...rest,
       title,
       slug: finalSlug,
-      registration_link: registration_link || null,
+      registration_link: safeUrl(registration_link),
       created_by: admin.id,
     })
     .select("id, slug")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("Activities POST error:", error);
+    return NextResponse.json({ error: "Erreur lors de la création de l'activité" }, { status: 500 });
+  }
 
   await service.from("audit_logs").insert({
     admin_id: admin.id,
@@ -94,7 +92,7 @@ export async function POST(req: NextRequest) {
     target_type: "activity",
     target_id: activity.id,
     details: { title, type: rest.type },
-    ip_address: req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address: getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true, id: activity.id }, { status: 201 });

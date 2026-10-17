@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { contactSchema } from "@/lib/utils/schemas";
 import { applyRateLimit } from "@/lib/utils/rateLimit";
+import { escapeHtml } from "@/lib/utils/security";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -9,9 +10,14 @@ export async function POST(req: NextRequest) {
   const limited = await applyRateLimit(req);
   if (limited) return limited;
 
-  const body = await req.json();
-  const result = contactSchema.safeParse(body);
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Corps de requête JSON invalide" }, { status: 400 });
+  }
 
+  const result = contactSchema.safeParse(body);
   if (!result.success) {
     return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   }
@@ -22,6 +28,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
+
   const { error } = await resend.emails.send({
     from: process.env.EMAIL_FROM!,
     to: process.env.EMAIL_TO!,
@@ -29,10 +40,10 @@ export async function POST(req: NextRequest) {
     subject: `[Contact JCI] ${subject}`,
     html: `
       <h2>Nouveau message de contact</h2>
-      <p><strong>De :</strong> ${name} (${email})</p>
-      <p><strong>Sujet :</strong> ${subject}</p>
+      <p><strong>De :</strong> ${safeName} (${safeEmail})</p>
+      <p><strong>Sujet :</strong> ${safeSubject}</p>
       <hr />
-      <p>${message.replace(/\n/g, "<br />")}</p>
+      <p>${safeMessage}</p>
     `,
   });
 

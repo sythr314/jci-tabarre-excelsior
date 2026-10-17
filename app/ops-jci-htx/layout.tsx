@@ -9,6 +9,14 @@ export const metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+
+  // Si on est sur la page de login, on ne redirige pas et on n'affiche pas la sidebar
+  if (pathname === "/ops-jci-htx/login") {
+    return <>{children}</>;
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

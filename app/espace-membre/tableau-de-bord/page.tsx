@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { calculateEngagementScore } from "@/lib/supabase/engagement";
 import { ENGAGEMENT_LEVELS } from "@/lib/supabase/types";
+import { safeUrl } from "@/lib/utils/security";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Mon tableau de bord — JCI Tabarre Excelsior" };
@@ -127,8 +128,8 @@ export default async function MemberDashboardPage() {
                     {new Date(act.activity_date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
                   </p>
                 </div>
-                {act.registration_link && (
-                  <a href={act.registration_link} target="_blank" rel="noopener noreferrer"
+                {safeUrl(act.registration_link) && (
+                  <a href={safeUrl(act.registration_link)!} target="_blank" rel="noopener noreferrer"
                     className="text-xs text-cyan font-medium hover:underline focus-visible:outline-none focus-visible:underline">
                     S'inscrire →
                   </a>

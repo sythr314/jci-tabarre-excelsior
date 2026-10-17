@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
 import { getSheetRows } from "@/lib/google/sheets";
+import { isValidUUID, isValidSheetId, getTrustedClientIp } from "@/lib/utils/security";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: activityId } = await params;
+  if (!isValidUUID(activityId)) {
+    return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+  }
 
-  // Vérifier session admin
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const auth = await requireActiveAdmin(["president", "charge_formation"]);
+  if (auth.error || !auth.admin) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+  const { admin } = auth;
 
   const service = createServiceClient();
-  const { data: admin } = await service
-    .from("admin_users").select("id, role").eq("user_id", user.id).single();
-  if (!admin || !["president", "charge_formation"].includes(admin.role)) {
-    return NextResponse.json({ error: "Permission insuffisante" }, { status: 403 });
-  }
 
   // Récupérer l'activité et son Google Sheet ID
   const { data: activity } = await service
@@ -30,6 +30,10 @@ export async function POST(
   if (!activity) return NextResponse.json({ error: "Activité introuvable" }, { status: 404 });
   if (!activity.google_sheet_id) {
     return NextResponse.json({ error: "Aucun Google Sheet lié à cette activité" }, { status: 400 });
+  }
+
+  if (!isValidSheetId(activity.google_sheet_id)) {
+    return NextResponse.json({ error: "Identifiant Google Sheet invalide" }, { status: 400 });
   }
 
   // Lire le Google Sheet
@@ -85,7 +89,8 @@ export async function POST(
       .upsert(upserts as object[], { onConflict: "activity_id,member_id", ignoreDuplicates: false });
 
     if (upsertError) {
-      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+      console.error("Attendance import upsert error:", upsertError);
+      return NextResponse.json({ error: "Échec de l'enregistrement des présences" }, { status: 500 });
     }
   }
 
@@ -96,7 +101,7 @@ export async function POST(
     target_type: "activity",
     target_id: activityId,
     details: { total: rows.length, matched, external, skipped },
-    ip_address: req.headers.get("x-forwarded-for") ?? "unknown",
+    ip_address: getTrustedClientIp(req),
   });
 
   return NextResponse.json({ success: true, imported: upserts.length, matched, external, skipped });
