@@ -32,41 +32,58 @@ const initiativeFields = `
 
 export async function getAllInitiatives(): Promise<Initiative[]> {
   if (!isSanityConfigured) return [];
-  return sanityClient.fetch(
-    `*[_type == "initiative"] | order(startDate desc) { ${initiativeFields} }`,
-    {},
-    { next: { revalidate: 3600 } }
-  );
+  try {
+    return await sanityClient.fetch(
+      `*[_type == "initiative"] | order(startDate desc) { ${initiativeFields} }`,
+      {},
+      { next: { revalidate: 3600 } }
+    );
+  } catch {
+    return [];
+  }
 }
 
 export async function getInitiativeBySlug(slug: string): Promise<Initiative | null> {
   if (!isSanityConfigured) return null;
-  return sanityClient.fetch(
-    `*[_type == "initiative" && slug.current == $slug][0] {
-      ${initiativeFields},
-      description,
-      gallery
-    }`,
-    { slug },
-    { next: { revalidate: 3600 } }
-  );
-}
-
-export async function getInitiativeSlugs(): Promise<{ slug: string }[]> {
-  if (!isSanityConfigured) return [];
-  const result = await sanityClient.fetch<{ slug: { current: string } }[]>(
-    `*[_type == "initiative"]{ slug }`,
-    {},
-    { next: { revalidate: 3600 } }
-  );
-  return result.map((r) => ({ slug: r.slug.current }));
+  try {
+    return await sanityClient.fetch(
+      `*[_type == "initiative" && slug.current == $slug][0] {
+        ${initiativeFields},
+        description,
+        gallery
+      }`,
+      { slug },
+      { next: { revalidate: 3600 } }
+    );
+  } catch {
+    return null;
+  }
 }
 
 export async function getRecentInitiatives(limit = 3): Promise<Initiative[]> {
   if (!isSanityConfigured) return [];
-  return sanityClient.fetch(
-    `*[_type == "initiative"] | order(startDate desc)[0...$limit] { ${initiativeFields} }`,
-    { limit },
-    { next: { revalidate: 3600 } }
-  );
+  try {
+    return await sanityClient.fetch(
+      `*[_type == "initiative"] | order(startDate desc)[0...$limit] { ${initiativeFields} }`,
+      { limit },
+      { next: { revalidate: 3600 } }
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function getInitiativesByCategory(
+  category: Initiative["category"]
+): Promise<Initiative[]> {
+  if (!isSanityConfigured) return [];
+  try {
+    return await sanityClient.fetch(
+      `*[_type == "initiative" && category == $category] | order(startDate desc) { ${initiativeFields} }`,
+      { category },
+      { next: { revalidate: 3600 } }
+    );
+  } catch {
+    return [];
+  }
 }

@@ -20,9 +20,13 @@ export type SiteSettings = {
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
   if (!isSanityConfigured) return null;
-  return sanityClient.fetch(
-    `*[_type == "siteSettings"][0]`,
-    {},
-    { next: { revalidate: 3600 } }
-  );
+  try {
+    return await sanityClient.fetch(
+      `*[_type == "siteSettings"][0]`,
+      {},
+      { next: { revalidate: 3600 } }
+    );
+  } catch {
+    return null;
+  }
 }

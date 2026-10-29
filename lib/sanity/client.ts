@@ -8,5 +8,7 @@ export const sanityClient = createClient({
 });
 
 export const isSanityConfigured =
-  !!process.env.NEXT_PUBLIC_SANITY_PROJECT_ID &&
-  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "placeholder";
+  Boolean(process.env.NEXT_PUBLIC_SANITY_PROJECT_ID) &&
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "placeholder" &&
+  !process.env.NEXT_PUBLIC_SANITY_PROJECT_ID?.includes("placeholder") &&
+  process.env.NEXT_PUBLIC_SANITY_PROJECT_ID !== "demo";
