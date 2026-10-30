@@ -59,7 +59,24 @@ export default async function ActiviteDetailPage({
       .eq("attended", true),
   ]);
 
-  const attendances = attendancesRes.status === "fulfilled" ? (attendancesRes.value.data ?? []) : [];
+  type AttendanceMember = { first_name: string; last_name: string; email: string };
+  type AttendanceRow = {
+    id: string;
+    attended: boolean;
+    source: string;
+    external_email: string | null;
+    external_name: string | null;
+    members: AttendanceMember | null;
+  };
+
+  // Sans types générés, Supabase infère la jointure `members` comme un tableau ;
+  // c'est une relation many-to-one, on normalise donc en objet unique.
+  const attendances: AttendanceRow[] = (
+    attendancesRes.status === "fulfilled" ? (attendancesRes.value.data ?? []) : []
+  ).map((row) => {
+    const m = row.members as unknown as AttendanceMember | AttendanceMember[] | null;
+    return { ...row, members: Array.isArray(m) ? (m[0] ?? null) : m };
+  });
   const presentCount = countRes.status === "fulfilled" ? (countRes.value.count ?? 0) : 0;
 
   const act = activity as {
@@ -184,14 +201,7 @@ export default async function ActiviteDetailPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {attendances.map((a: {
-                      id: string;
-                      attended: boolean;
-                      source: string;
-                      external_email: string | null;
-                      external_name: string | null;
-                      members?: { first_name: string; last_name: string; email: string } | null;
-                    }) => {
+                    {attendances.map((a) => {
                       const name = a.members
                         ? `${a.members.first_name} ${a.members.last_name}`
                         : a.external_name ?? a.external_email ?? "—";

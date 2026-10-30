@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
 import { isValidUUID, escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email/resend";
 import { z } from "zod";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const schema = z.object({
   notes: z.string().max(1000).optional(),
@@ -53,7 +52,7 @@ export async function POST(
 
   // Email de notification au candidat avec échappement HTML
   const safeNotes = body.data.notes ? escapeHtml(body.data.notes) : "";
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to: application.email,
     subject: "Suite de votre candidature à JCI Tabarre Excelsior",

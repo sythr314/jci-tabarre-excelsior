@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email/resend";
 import { joinSchema, INTERESTS_OPTIONS, HOW_HEARD_OPTIONS, EDUCATION_OPTIONS } from "@/lib/utils/schemas";
 import { applyRateLimit } from "@/lib/utils/rateLimit";
 import { createServiceClient } from "@/lib/supabase/server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const INTEREST_LABELS = Object.fromEntries(INTERESTS_OPTIONS.map((o) => [o.value, o.label]));
 const HOW_HEARD_LABELS = Object.fromEntries(HOW_HEARD_OPTIONS.map((o) => [o.value, o.label]));
@@ -96,7 +95,7 @@ export async function POST(req: NextRequest) {
   const safeMotivation = escapeHtml(motivation).replace(/\n/g, "<br />");
 
   await Promise.allSettled([
-    resend.emails.send({
+    getResend().emails.send({
       from: process.env.EMAIL_FROM!,
       to: process.env.EMAIL_TO!,
       replyTo: email,
@@ -121,7 +120,7 @@ export async function POST(req: NextRequest) {
         <p style="color:#4b5563;line-height:1.6;">${safeMotivation}</p>
       `,
     }),
-    resend.emails.send({
+    getResend().emails.send({
       from: process.env.EMAIL_FROM!,
       to: email,
       subject: "Votre candidature à JCI Tabarre Excelsior",
