@@ -10,8 +10,14 @@ const MEMBER_INVITE = `${MEMBER_PREFIX}/invitation`;
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Ignorer les assets statiques et les routes API (gérées individuellement)
+  // Ignorer immédiatement toutes les routes publiques, assets statiques et routes API
+  const isProtectedArea =
+    pathname.startsWith(ADMIN_PREFIX) ||
+    pathname.startsWith(MEMBER_PREFIX) ||
+    pathname.startsWith("/studio");
+
   if (
+    !isProtectedArea ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/") ||
     pathname.includes(".")
@@ -22,7 +28,9 @@ export async function proxy(request: NextRequest) {
   // Préparer les en-têtes de requête en nettoyant les en-têtes sensibles pour éviter le spoofing
   const requestHeaders = new Headers(request.headers);
   requestHeaders.delete("x-admin-role");
+  requestHeaders.delete("x-admin-name");
   requestHeaders.delete("x-member-id");
+  requestHeaders.delete("x-member-name");
   requestHeaders.set("x-pathname", pathname);
 
   let response = NextResponse.next({
@@ -30,6 +38,20 @@ export async function proxy(request: NextRequest) {
       headers: requestHeaders,
     },
   });
+
+  // Court-circuit rapide si aucun cookie d'authentification Supabase n'est présent
+  const hasAuthCookie = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
+  if (!hasAuthCookie) {
+    if (pathname === ADMIN_LOGIN || pathname === MEMBER_LOGIN || pathname.startsWith(MEMBER_INVITE)) {
+      return response;
+    }
+    if (pathname.startsWith(ADMIN_PREFIX) || pathname.startsWith("/studio")) {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
+    }
+    if (pathname.startsWith(MEMBER_PREFIX)) {
+      return NextResponse.redirect(new URL(MEMBER_LOGIN, request.url));
+    }
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
@@ -84,7 +106,7 @@ export async function proxy(request: NextRequest) {
     // Vérifier que l'utilisateur est bien un admin actif
     const { data: adminUser } = await supabase
       .from("admin_users")
-      .select("role, is_active")
+      .select("name, role, is_active")
       .eq("user_id", user.id)
       .single();
 
@@ -94,6 +116,7 @@ export async function proxy(request: NextRequest) {
     }
 
     requestHeaders.set("x-admin-role", adminUser.role);
+    requestHeaders.set("x-admin-name", encodeURIComponent(adminUser.name));
     response = NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -119,7 +142,7 @@ export async function proxy(request: NextRequest) {
     // Vérifier que l'utilisateur est un membre actif
     const { data: member } = await supabase
       .from("members")
-      .select("id, status")
+      .select("id, first_name, last_name, status")
       .eq("user_id", user.id)
       .single();
 
@@ -129,6 +152,7 @@ export async function proxy(request: NextRequest) {
     }
 
     requestHeaders.set("x-member-id", member.id);
+    requestHeaders.set("x-member-name", encodeURIComponent(`${member.first_name} ${member.last_name}`));
     response = NextResponse.next({
       request: {
         headers: requestHeaders,

@@ -89,11 +89,25 @@ export function MobileDrawer({ open, onClose, navLinks, currentPath }: MobileDra
           ))}
         </nav>
 
-        <div className="p-5 border-t border-white/10">
-          <Link href="/join" onClick={onClose}>
+        <div className="p-5 border-t border-white/10 space-y-3">
+          <Link
+            href="/espace-membre/connexion"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-lg text-sm font-heading font-semibold text-white border border-white/25 hover:border-cyan hover:text-cyan transition-colors"
+          >
+            Espace Membre (Connexion)
+          </Link>
+          <Link href="/join" onClick={onClose} className="block">
             <Button variant="primary" className="w-full">
               Nous rejoindre
             </Button>
+          </Link>
+          <Link
+            href="/ops-jci-htx/login"
+            onClick={onClose}
+            className="block text-center text-xs text-white/50 hover:text-cyan pt-1 transition-colors"
+          >
+            Accès Administration
           </Link>
         </div>
       </div>

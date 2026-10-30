@@ -24,17 +24,26 @@ export default async function MemberLayout({ children }: { children: React.React
     return <>{children}</>;
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/espace-membre/connexion");
+  // Utiliser les en-têtes déjà vérifiés par proxy.ts pour éviter un double aller-retour réseau Supabase
+  const proxyMemberId = headersList.get("x-member-id");
+  const proxyMemberName = headersList.get("x-member-name");
 
-  const { data: member } = await supabase
-    .from("members")
-    .select("first_name, last_name, status")
-    .eq("user_id", user.id)
-    .single();
+  let fullName = proxyMemberName ? decodeURIComponent(proxyMemberName) : "";
 
-  if (!member || member.status === "inactive") redirect("/espace-membre/connexion");
+  if (!proxyMemberId || !fullName) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) redirect("/espace-membre/connexion");
+
+    const { data: member } = await supabase
+      .from("members")
+      .select("first_name, last_name, status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!member || member.status === "inactive") redirect("/espace-membre/connexion");
+    fullName = `${member.first_name} ${member.last_name}`;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -53,7 +62,7 @@ export default async function MemberLayout({ children }: { children: React.React
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-white/60 text-sm hidden md:block">{member.first_name} {member.last_name}</span>
+          <span className="text-white/60 text-sm hidden md:block">{fullName}</span>
           <MemberLogoutButton />
         </div>
       </nav>

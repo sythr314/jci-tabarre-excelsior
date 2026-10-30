@@ -19,9 +19,16 @@ export default function MemberLoginPage() {
           <h1 className="font-heading font-bold text-navy text-xl mb-6">Connexion</h1>
           <MemberLoginForm />
         </div>
-        <p className="text-center text-gray-400 text-xs mt-6">
-          Pas encore membre ? <a href="/join" className="text-cyan hover:underline">Faire une demande d'adhésion</a>
-        </p>
+        <div className="text-center text-gray-400 text-xs mt-6 space-y-3">
+          <p>
+            Pas encore membre ? <a href="/join" className="text-cyan hover:underline">Faire une demande d&apos;adhésion</a>
+          </p>
+          <p className="pt-3 border-t border-gray-200 flex items-center justify-center gap-4">
+            <a href="/" className="text-gray-500 hover:text-navy transition-colors">← Retour au site</a>
+            <span>•</span>
+            <a href="/ops-jci-htx/login" className="text-gray-500 hover:text-navy transition-colors">Accès Administration →</a>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -53,6 +53,16 @@ export function Header() {
 
             {/* CTA + burger */}
             <div className="flex items-center gap-3">
+              <Link
+                href="/espace-membre/connexion"
+                className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md text-sm font-heading font-medium text-white/90 border border-white/25 hover:border-cyan hover:text-cyan hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Espace Membre
+              </Link>
+
               <Link href="/join" className="hidden md:block">
                 <Button size="sm" variant="primary">
                   Nous rejoindre

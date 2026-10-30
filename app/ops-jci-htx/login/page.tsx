@@ -16,6 +16,11 @@ export default function AdminLoginPage() {
           <p className="text-white/50 text-sm mt-2">Espace administration</p>
         </div>
         <AdminLoginForm />
+        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-white/50">
+          <a href="/" className="hover:text-cyan transition-colors">← Retour au site</a>
+          <span>•</span>
+          <a href="/espace-membre/connexion" className="hover:text-cyan transition-colors">Espace Membre →</a>
+        </div>
       </div>
     </div>
   );

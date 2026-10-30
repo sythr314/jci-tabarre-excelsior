@@ -17,6 +17,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return <>{children}</>;
   }
 
+  // Utiliser les en-têtes déjà vérifiés par proxy.ts pour éviter un double aller-retour réseau Supabase
+  const proxyRole = headersList.get("x-admin-role") as AdminRole | null;
+  const proxyName = headersList.get("x-admin-name");
+
+  if (proxyRole && proxyName) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar role={proxyRole} adminName={decodeURIComponent(proxyName)} />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

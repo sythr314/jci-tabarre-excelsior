@@ -6,6 +6,8 @@ const navLinks = [
   { href: "/initiatives", label: "Nos initiatives" },
   { href: "/contact", label: "Contact" },
   { href: "/join", label: "Nous rejoindre" },
+  { href: "/espace-membre/connexion", label: "Espace Membre (Connexion)" },
+  { href: "/ops-jci-htx/login", label: "Administration" },
 ];
 
 export function Footer() {
