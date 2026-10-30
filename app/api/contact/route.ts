@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email/resend";
 import { contactSchema } from "@/lib/utils/schemas";
 import { applyRateLimit } from "@/lib/utils/rateLimit";
 import { escapeHtml } from "@/lib/utils/security";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   const limited = await applyRateLimit(req);
@@ -43,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, demo: true });
   }
 
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: process.env.EMAIL_FROM,
     to: process.env.EMAIL_TO || process.env.EMAIL_FROM,
     replyTo: email,

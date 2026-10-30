@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
 import { isValidUUID, escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email/resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(
   req: NextRequest,
@@ -89,7 +88,7 @@ export async function POST(
   const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/espace-membre/invitation/${invitation.token}`;
 
   // Envoyer l'email d'invitation
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to: application.email,
     subject: "Votre candidature JCI a été acceptée — Activez votre compte",

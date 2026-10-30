@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
 import { escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
-import { Resend } from "resend";
+import { getResend } from "@/lib/email/resend";
 import { z } from "zod";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const schema = z.object({
   email: z.string().email(),
@@ -66,7 +65,7 @@ export async function POST(req: NextRequest) {
   const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/espace-membre/invitation/${invitation.token}`;
 
   // Envoyer l'email
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.EMAIL_FROM!,
     to: email,
     subject: `Invitation à rejoindre JCI Tabarre Excelsior`,
