@@ -39,7 +39,18 @@ export default async function CandidaturesPage() {
     .select("id, first_name, last_name, email, commune, birth_date, status, submitted_at, how_heard")
     .order("submitted_at", { ascending: false });
 
-  const list = applications ?? [];
+  type ApplicationRow = {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    commune: string | null;
+    birth_date: string | null;
+    status: string;
+    submitted_at: string;
+    how_heard: string | null;
+  };
+  const list = (applications ?? []) as ApplicationRow[];
   const pending  = list.filter((a) => a.status === "pending").length;
   const approved = list.filter((a) => a.status === "approved").length;
   const rejected = list.filter((a) => a.status === "rejected").length;

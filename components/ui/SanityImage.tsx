@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils/cn";
 interface SanityImageProps {
   source: object;
   alt: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   className?: string;
   priority?: boolean;
   fill?: boolean;
@@ -16,8 +16,8 @@ interface SanityImageProps {
 export function SanityImage({
   source,
   alt,
-  width,
-  height,
+  width = 800,
+  height = 600,
   className,
   priority = false,
   fill = false,

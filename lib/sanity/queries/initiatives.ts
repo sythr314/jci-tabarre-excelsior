@@ -43,6 +43,19 @@ export async function getAllInitiatives(): Promise<Initiative[]> {
   }
 }
 
+export async function getInitiativeSlugs(): Promise<{ slug: string }[]> {
+  if (!isSanityConfigured) return [];
+  try {
+    return await sanityClient.fetch(
+      `*[_type == "initiative" && defined(slug.current)]{ "slug": slug.current }`,
+      {},
+      { next: { revalidate: 3600 } }
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function getInitiativeBySlug(slug: string): Promise<Initiative | null> {
   if (!isSanityConfigured) return null;
   try {

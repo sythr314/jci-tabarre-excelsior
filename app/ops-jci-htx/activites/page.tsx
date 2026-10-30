@@ -37,6 +37,17 @@ const statusColors: Record<ActivityStatus, string> = {
 
 type SearchParams = { type?: string; status?: string };
 
+type ActivityRow = {
+  id: string;
+  title: string;
+  type: ActivityType;
+  activity_date: string;
+  location: string | null;
+  status: ActivityStatus;
+  capacity: number | null;
+  created_at: string;
+};
+
 export default async function ActivitesPage({
   searchParams,
 }: {
@@ -54,7 +65,7 @@ export default async function ActivitesPage({
   if (status && status !== "all") query = query.eq("status", status);
 
   const { data: activities } = await query;
-  const list = activities ?? [];
+  const list = (activities ?? []) as ActivityRow[];
 
   const counts = {
     total: list.length,

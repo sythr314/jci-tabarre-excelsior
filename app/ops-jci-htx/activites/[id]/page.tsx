@@ -62,7 +62,20 @@ export default async function ActiviteDetailPage({
   const attendances = attendancesRes.status === "fulfilled" ? (attendancesRes.value.data ?? []) : [];
   const presentCount = countRes.status === "fulfilled" ? (countRes.value.count ?? 0) : 0;
 
-  const act = activity as typeof activity & { type: ActivityType; status: ActivityStatus };
+  const act = activity as {
+    id: string;
+    title: string;
+    type: ActivityType;
+    status: ActivityStatus;
+    activity_date: string;
+    location: string | null;
+    capacity: number | null;
+    registration_deadline: string | null;
+    registration_link: string | null;
+    description: string | null;
+    google_sheet_id: string | null;
+    sheet_email_column: string | null;
+  };
 
   return (
     <div className="p-8 max-w-5xl">
