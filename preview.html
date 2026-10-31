@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JCI Tabarre Excelsior — Aperçu Interactif Local</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#1e3a8a',
+            'navy-dark': '#0f172a',
+            cyan: '#06b6d4',
+            'cyan-light': '#22d3ee',
+          },
+          fontFamily: {
+            heading: ['Montserrat', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    h1, h2, h3, h4, .font-heading { font-family: 'Montserrat', sans-serif; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.25s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Top Announcement Bar -->
+  <header class="bg-navy text-white text-xs py-2 px-4 border-b border-navy-dark/40">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-cyan animate-pulse"></span>
+        <span class="font-medium text-cyan-light">🇭🇹 Aperçu Local Actif</span>
+        <span class="text-white/60">· Junior Chamber International · Tabarre, Haïti</span>
+      </div>
+      <div class="flex items-center gap-4 text-white/80">
+        <span>Devise : « Développer des leaders pour un changement positif »</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Navigation Bar -->
+  <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        
+        <!-- Logo -->
+        <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('accueil')">
+          <div class="w-11 h-11 rounded-xl bg-navy flex items-center justify-center text-cyan font-heading font-black text-xl shadow-md border border-cyan/30">
+            JCI
+          </div>
+          <div>
+            <div class="font-heading font-extrabold text-navy text-lg leading-tight tracking-tight">TABARRE EXCELSIOR</div>
+            <div class="text-[11px] font-semibold text-cyan uppercase tracking-widest">Haïti · Zone 1</div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="hidden md:flex items-center gap-1 font-medium text-sm text-slate-600">
+          <button onclick="switchTab('accueil')" id="nav-accueil" class="nav-btn px-4 py-2 rounded-lg text-navy font-semibold bg-slate-100 transition-all">Accueil</button>
+          <button onclick="switchTab('apropos')" id="nav-apropos" class="nav-btn px-4 py-2 rounded-lg hover:text-navy hover:bg-slate-50 transition-all">À propos</button>
+          <button onclick="switchTab('initiatives')" id="nav-initiatives" class="nav-btn px-4 py-2 rounded-lg hover:text-navy hover:bg-slate-50 transition-all">Initiatives</button>
+          <button onclick="switchTab('join')" id="nav-join" class="nav-btn px-4 py-2 rounded-lg hover:text-navy hover:bg-slate-50 transition-all">Adhésion</button>
+          <button onclick="switchTab('espace-membre')" id="nav-espace-membre" class="nav-btn px-4 py-2 rounded-lg hover:text-navy hover:bg-slate-50 transition-all flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            Espace Membre
+          </button>
+          <button onclick="switchTab('admin')" id="nav-admin" class="nav-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-navy/5 text-navy hover:bg-navy hover:text-white transition-all border border-navy/20">
+            Console Ops
+          </button>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="flex items-center gap-3">
+          <button onclick="switchTab('join')" class="hidden sm:inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-navy hover:bg-navy-dark shadow-sm hover:shadow transition-all">
+            Devenir Membre
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 1: ACCUEIL -->
+  <!-- ========================================================================= -->
+  <main id="tab-accueil" class="tab-content active flex-grow">
+    
+    <!-- Hero Section -->
+    <section class="relative bg-gradient-to-br from-navy via-navy to-slate-900 text-white py-24 sm:py-32 overflow-hidden">
+      <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#06b6d4_1px,transparent_1px)] [background-size:24px_24px]"></div>
+      
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan/15 border border-cyan/30 text-cyan text-xs font-semibold tracking-wider uppercase mb-6">
+            <span class="w-2 h-2 rounded-full bg-cyan"></span>
+            Organisation Locale Membre JCI Haïti
+          </div>
+
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] mb-6">
+            Des jeunes leaders pour un <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan to-cyan-light">Haïti meilleur</span>
+          </h1>
+
+          <p class="text-lg sm:text-xl text-slate-300 leading-relaxed mb-10 max-w-2xl font-light">
+            JCI Tabarre Excelsior réunit de jeunes professionnels et entrepreneurs de 18 à 40 ans engagés pour le développement communautaire, l'entrepreneuriat, la santé et la formation.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <button onclick="switchTab('join')" class="px-7 py-3.5 rounded-xl font-heading font-bold text-sm text-navy bg-cyan hover:bg-cyan-light shadow-lg shadow-cyan/20 transition-all transform hover:-translate-y-0.5">
+              Rejoindre notre organisation
+            </button>
+            <button onclick="switchTab('initiatives')" class="px-7 py-3.5 rounded-xl font-heading font-semibold text-sm text-white bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-sm transition-all">
+              Découvrir nos initiatives →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="bg-cyan py-12 shadow-inner">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div>
+            <div class="text-4xl md:text-5xl font-black font-heading text-navy">50+</div>
+            <div class="text-navy/80 font-semibold text-sm mt-1">Membres actifs</div>
+          </div>
+          <div>
+            <div class="text-4xl md:text-5xl font-black font-heading text-navy">20+</div>
+            <div class="text-navy/80 font-semibold text-sm mt-1">Initiatives réalisées</div>
+          </div>
+          <div>
+            <div class="text-4xl md:text-5xl font-black font-heading text-navy">5 000+</div>
+            <div class="text-navy/80 font-semibold text-sm mt-1">Bénéficiaires directs</div>
+          </div>
+          <div>
+            <div class="text-4xl md:text-5xl font-black font-heading text-navy">10+</div>
+            <div class="text-navy/80 font-semibold text-sm mt-1">Années d'engagement</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Piliers / Mission -->
+    <section class="py-20 bg-slate-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16">
+          <h2 class="text-3xl font-bold font-heading text-navy mb-4">Notre Mission d'Impact</h2>
+          <p class="text-slate-600 text-base">Offrir aux jeunes de Tabarre des opportunités concrètes de développement du leadership pour créer des changements positifs durables.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-navy flex items-center justify-center text-2xl mb-5">🌍</div>
+            <h3 class="font-heading font-bold text-navy text-lg mb-2">Communauté</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">Actions concrètes dans les quartiers de Tabarre : assainissement, éducation civique et solidarité.</p>
+          </div>
+
+          <div class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl mb-5">💡</div>
+            <h3 class="font-heading font-bold text-navy text-lg mb-2">Entrepreneuriat</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">Soutien aux porteurs de projets, ateliers de modélisation d'affaires et réseautage professionnel.</p>
+          </div>
+
+          <div class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-cyan/10 text-cyan flex items-center justify-center text-2xl mb-5">🎓</div>
+            <h3 class="font-heading font-bold text-navy text-lg mb-2">Formation & Leadership</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">Prise de parole en public, gestion de projet, protocole et gouvernance associative.</p>
+          </div>
+
+          <div class="bg-white p-7 rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl mb-5">🤝</div>
+            <h3 class="font-heading font-bold text-navy text-lg mb-2">Réseau Mondial</h3>
+            <p class="text-slate-600 text-sm leading-relaxed">Connexion directe avec plus de 200 000 jeunes citoyens actifs dans plus de 100 pays.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Initiatives Preview -->
+    <section class="py-20 bg-white border-t border-slate-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
+          <div>
+            <span class="text-cyan font-bold text-xs uppercase tracking-wider">Sur le terrain</span>
+            <h2 class="text-3xl font-bold font-heading text-navy mt-1">Initiatives Récentes</h2>
+          </div>
+          <button onclick="switchTab('initiatives')" class="text-navy font-semibold text-sm hover:text-cyan flex items-center gap-1 transition-colors">
+            Voir toutes les initiatives →
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Card 1 -->
+          <div class="group bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all">
+            <div class="h-48 bg-gradient-to-tr from-navy to-blue-700 p-6 flex flex-col justify-end text-white">
+              <span class="inline-block px-2.5 py-1 rounded-md text-xs font-semibold bg-cyan text-navy w-fit mb-2">Santé & Prévention</span>
+              <h3 class="font-heading font-bold text-xl leading-snug">Clinique Mobile Tabarre 2026</h3>
+            </div>
+            <div class="p-6">
+              <p class="text-slate-600 text-sm leading-relaxed mb-4">Consultations gratuites, dépistages et distribution de kits d'hygiène pour plus de 800 familles.</p>
+              <div class="flex items-center justify-between text-xs text-slate-500 pt-4 border-t border-slate-200">
+                <span>📍 Tabarre Centre</span>
+                <span class="font-semibold text-navy">800+ bénéficiaires</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="group bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all">
+            <div class="h-48 bg-gradient-to-tr from-cyan to-blue-600 p-6 flex flex-col justify-end text-white">
+              <span class="inline-block px-2.5 py-1 rounded-md text-xs font-semibold bg-white text-navy w-fit mb-2">Entrepreneuriat</span>
+              <h3 class="font-heading font-bold text-xl leading-snug">Salon des Jeunes Innovateurs</h3>
+            </div>
+            <div class="p-6">
+              <p class="text-slate-600 text-sm leading-relaxed mb-4">Concours de pitch et mentorat pour 25 startups haïtiennes axées sur la transformation locale.</p>
+              <div class="flex items-center justify-between text-xs text-slate-500 pt-4 border-t border-slate-200">
+                <span>📍 Université Quisqueya</span>
+                <span class="font-semibold text-navy">25 projets primés</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="group bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-all">
+            <div class="h-48 bg-gradient-to-tr from-emerald-600 to-teal-800 p-6 flex flex-col justify-end text-white">
+              <span class="inline-block px-2.5 py-1 rounded-md text-xs font-semibold bg-white text-emerald-800 w-fit mb-2">Environnement</span>
+              <h3 class="font-heading font-bold text-xl leading-snug">Tabarre Verte & Durable</h3>
+            </div>
+            <div class="p-6">
+              <p class="text-slate-600 text-sm leading-relaxed mb-4">Campagne de reboisement urbain et sensibilisation citoyenne au tri sélectif des déchets.</p>
+              <div class="flex items-center justify-between text-xs text-slate-500 pt-4 border-t border-slate-200">
+                <span>📍 Boulevard 15 Octobre</span>
+                <span class="font-semibold text-navy">1 500 arbres plantés</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action Banner -->
+    <section class="py-16 bg-navy text-white text-center">
+      <div class="max-w-4xl mx-auto px-4">
+        <h2 class="text-3xl font-bold font-heading mb-4">Prêt à faire la différence à Tabarre ?</h2>
+        <p class="text-slate-300 mb-8 text-base">Rejoignez un réseau dynamique de jeunes acteurs de changement prêts à construire l'avenir.</p>
+        <button onclick="switchTab('join')" class="px-8 py-3.5 rounded-xl font-heading font-bold text-sm text-navy bg-cyan hover:bg-cyan-light shadow-lg transition-all">
+          Postuler dès maintenant
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 2: A PROPOS -->
+  <!-- ========================================================================= -->
+  <main id="tab-apropos" class="tab-content flex-grow py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl mb-12">
+        <span class="text-cyan font-bold text-xs uppercase tracking-wider">Notre Histoire & Identité</span>
+        <h1 class="text-4xl font-extrabold font-heading text-navy mt-2 mb-4">Bâtir l'Excellence Locale</h1>
+        <p class="text-slate-600 text-lg leading-relaxed">
+          Fondée par des jeunes passionnés du développement d'Haïti, <strong>JCI Tabarre Excelsior</strong> est affiliée à la <strong>Jeune Chambre Internationale Haïti (JCI Haïti)</strong>.
+        </p>
+      </div>
+
+      <!-- Galerie des Past Presidents -->
+      <div class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm mb-12">
+        <h2 class="text-2xl font-bold font-heading text-navy mb-2">Galerie des Présidents Passés</h2>
+        <p class="text-slate-500 text-sm mb-8">Les leaders qui ont marqué l'histoire et la croissance de notre organisation locale.</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="text-center p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="w-20 h-20 mx-auto rounded-full bg-navy/10 flex items-center justify-center text-2xl font-bold text-navy mb-3">P1</div>
+            <div class="font-heading font-bold text-navy">Jean-René Pierre</div>
+            <div class="text-xs text-cyan font-semibold">Président Fondateur</div>
+            <div class="text-xs text-slate-400 mt-1">Mandat 2018</div>
+          </div>
+          <div class="text-center p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="w-20 h-20 mx-auto rounded-full bg-navy/10 flex items-center justify-center text-2xl font-bold text-navy mb-3">P2</div>
+            <div class="font-heading font-bold text-navy">Marie-Chantal Dorval</div>
+            <div class="text-xs text-cyan font-semibold">Past Présidente</div>
+            <div class="text-xs text-slate-400 mt-1">Mandat 2020</div>
+          </div>
+          <div class="text-center p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="w-20 h-20 mx-auto rounded-full bg-navy/10 flex items-center justify-center text-2xl font-bold text-navy mb-3">P3</div>
+            <div class="font-heading font-bold text-navy">Stanley Augustin</div>
+            <div class="text-xs text-cyan font-semibold">Past Président</div>
+            <div class="text-xs text-slate-400 mt-1">Mandat 2022</div>
+          </div>
+          <div class="text-center p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <div class="w-20 h-20 mx-auto rounded-full bg-cyan/20 flex items-center justify-center text-2xl font-bold text-navy mb-3">2026</div>
+            <div class="font-heading font-bold text-navy">Comité Actuel</div>
+            <div class="text-xs text-cyan font-semibold">Présidence en exercice</div>
+            <div class="text-xs text-slate-400 mt-1">Mandat 2026</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 3: INITIATIVES -->
+  <!-- ========================================================================= -->
+  <main id="tab-initiatives" class="tab-content flex-grow py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          <span class="text-cyan font-bold text-xs uppercase tracking-wider">Portfolio d'Actions</span>
+          <h1 class="text-4xl font-extrabold font-heading text-navy mt-1">Toutes nos Initiatives</h1>
+        </div>
+        <!-- Category Filters -->
+        <div class="flex flex-wrap gap-2 text-xs font-semibold">
+          <button class="px-3.5 py-2 rounded-lg bg-navy text-white">Toutes</button>
+          <button class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100">Communauté</button>
+          <button class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100">Santé</button>
+          <button class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100">Entrepreneuriat</button>
+          <button class="px-3.5 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100">Environnement</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <span class="px-2.5 py-1 rounded bg-blue-50 text-navy font-semibold text-xs">Formation</span>
+          <h3 class="font-heading font-bold text-navy text-xl mt-3 mb-2">Académie d'Art Oratoire</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-4">Formation intensive de 6 semaines sur le débat parlementaire, le pitch et la communication persuasive.</p>
+          <div class="text-xs text-slate-400">Date : Trimestriel · 40 participants</div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <span class="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold text-xs">Écologie</span>
+          <h3 class="font-heading font-bold text-navy text-xl mt-3 mb-2">Opération Rivière Propre</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-4">Sensibilisation citoyenne et curage participatif des ravines bordant la commune de Tabarre.</p>
+          <div class="text-xs text-slate-400">Date : Juin 2026 · 150 bénévoles</div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <span class="px-2.5 py-1 rounded bg-amber-50 text-amber-700 font-semibold text-xs">Jeunesse</span>
+          <h3 class="font-heading font-bold text-navy text-xl mt-3 mb-2">Bourse Excelsior pour Lycéens</h3>
+          <p class="text-slate-600 text-sm leading-relaxed mb-4">Accompagnement scolaire, mentorat et octroi de fournitures pour élèves méritants de Tabarre.</p>
+          <div class="text-xs text-slate-400">Date : Septembre 2026 · 100 lauréats</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 4: JOIN (FORMULAIRE D'ADHESION) -->
+  <!-- ========================================================================= -->
+  <main id="tab-join" class="tab-content flex-grow py-16">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6">
+      <div class="text-center mb-10">
+        <span class="text-cyan font-bold text-xs uppercase tracking-wider">Candidature 2026</span>
+        <h1 class="text-4xl font-extrabold font-heading text-navy mt-1 mb-3">Rejoindre JCI Tabarre Excelsior</h1>
+        <p class="text-slate-600 text-sm">Remplissez ce formulaire pour soumettre votre candidature. Critère officiel : avoir entre <strong>18 et 40 ans</strong>.</p>
+      </div>
+
+      <div class="bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-sm">
+        <form onsubmit="handleJoinSubmit(event)" class="space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Prénom *</label>
+              <input type="text" required placeholder="ex: Jean" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Nom *</label>
+              <input type="text" required placeholder="ex: Baptiste" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Email *</label>
+              <input type="email" required placeholder="jean@exemple.com" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Téléphone / WhatsApp *</label>
+              <input type="tel" required placeholder="+509 3000 0000" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Date de naissance * (18–40 ans)</label>
+              <input type="date" required value="2000-01-15" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Profession / Domaine *</label>
+              <input type="text" required placeholder="ex: Ingénieur agronome" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-700 mb-1">Pourquoi souhaitez-vous rejoindre la JCI ? *</label>
+            <textarea rows="3" required placeholder="Expliquez vos motivations et ce que vous souhaitez apporter à la communauté..." class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-cyan text-sm"></textarea>
+          </div>
+
+          <div id="join-alert" class="hidden p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm">
+            ✅ <strong>Candidature reçue avec succès !</strong> (Mode Démo : les données ont été validées et simulées).
+          </div>
+
+          <button type="submit" class="w-full py-3.5 rounded-xl font-heading font-bold text-sm text-white bg-navy hover:bg-navy-dark shadow-md transition-all">
+            Envoyer ma candidature
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 5: ESPACE MEMBRE (DASHBOARD) -->
+  <!-- ========================================================================= -->
+  <main id="tab-espace-membre" class="tab-content flex-grow py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Welcome Header -->
+      <div class="bg-gradient-to-r from-navy to-blue-900 rounded-2xl p-8 text-white mb-8 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <div class="text-xs uppercase tracking-wider text-cyan font-bold">Portail Membre JCI</div>
+            <h1 class="text-2xl sm:text-3xl font-bold font-heading mt-1">Bonjour, Stanley Augustin 👋</h1>
+            <p class="text-white/70 text-sm">Membre Titulaire · Adhérent depuis 2022 · JCI Tabarre Excelsior</p>
+          </div>
+          <div class="px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-xs font-semibold backdrop-blur-sm">
+            Statut : <span class="text-emerald-400">Cotisation 2026 à jour</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engagement Score Gauge -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        
+        <!-- Score Card (100 pts) -->
+        <div class="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-heading font-bold text-navy text-lg">Score d'Engagement</h3>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan/15 text-cyan">Champion (85+)</span>
+          </div>
+          <div class="text-center py-6">
+            <div class="inline-flex items-center justify-center w-36 h-36 rounded-full border-8 border-cyan text-navy font-black text-4xl shadow-inner font-heading">
+              88<span class="text-base text-slate-400 font-normal">/100</span>
+            </div>
+            <div class="mt-4 font-semibold text-navy text-sm">Très Forte Implication</div>
+            <p class="text-slate-500 text-xs mt-1">Actif dans le top 5% des membres de la locale</p>
+          </div>
+
+          <!-- Breakdown -->
+          <div class="space-y-2.5 pt-4 border-t border-slate-100 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-600">Présence aux activités (max 40)</span>
+              <span class="font-bold text-navy">36 pts</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-600">Formations complétées (max 25)</span>
+              <span class="font-bold text-navy">22 pts</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-600">Cotisation payée (max 20)</span>
+              <span class="font-bold text-emerald-600">20 pts</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-600">Rôle au comité (max 15)</span>
+              <span class="font-bold text-navy">10 pts</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activités à venir -->
+        <div class="lg:col-span-2 bg-white p-7 rounded-2xl border border-slate-200 shadow-sm">
+          <h3 class="font-heading font-bold text-navy text-lg mb-4">Prochaines Activités Officielles</h3>
+          <div class="space-y-4">
+            <div class="p-4 rounded-xl border border-slate-200 hover:border-cyan transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-navy text-white flex flex-col items-center justify-center font-heading">
+                  <span class="text-xs">NOV</span>
+                  <span class="font-black text-sm">14</span>
+                </div>
+                <div>
+                  <h4 class="font-heading font-bold text-navy text-sm">Assemblée Générale Ordinaire</h4>
+                  <p class="text-xs text-slate-500">Bilan d'étape du mandat 2026 · Salle Polyvalente Tabarre</p>
+                </div>
+              </div>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">Inscrit</span>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-200 hover:border-cyan transition-colors flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-cyan text-navy flex flex-col items-center justify-center font-heading">
+                  <span class="text-xs">DEC</span>
+                  <span class="font-black text-sm">05</span>
+                </div>
+                <div>
+                  <h4 class="font-heading font-bold text-navy text-sm">Gala Annuel de Clôture & Passation</h4>
+                  <p class="text-xs text-slate-500">Célébration des réussites de l'année et remise des prix JCI</p>
+                </div>
+              </div>
+              <button class="px-3 py-1 rounded-lg text-xs font-semibold bg-navy text-white hover:bg-navy-dark">Participer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- TAB 6: CONSOLE OPS ADMIN -->
+  <!-- ========================================================================= -->
+  <main id="tab-admin" class="tab-content flex-grow py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-0.5 rounded">Console Sécurisée</span>
+          <h1 class="text-3xl font-extrabold font-heading text-navy mt-1">Administration /ops-jci-htx</h1>
+        </div>
+        <div class="text-xs text-slate-500">Rôle : <strong>Super Administrateur</strong></div>
+      </div>
+
+      <!-- Admin KPIs -->
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold uppercase">Candidatures en attente</div>
+          <div class="text-3xl font-black font-heading text-amber-500 mt-2">4</div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold uppercase">Membres Actifs</div>
+          <div class="text-3xl font-black font-heading text-navy mt-2">52</div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold uppercase">Cotisations Collectées</div>
+          <div class="text-3xl font-black font-heading text-emerald-600 mt-2">84%</div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold uppercase">Activités Réalisées</div>
+          <div class="text-3xl font-black font-heading text-cyan mt-2">18</div>
+        </div>
+      </div>
+
+      <!-- Candidatures en attente de validation -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+          <h3 class="font-heading font-bold text-navy">Candidatures Récentes à Valider</h3>
+          <span class="text-xs text-slate-500">Validation avec génération de token d'activation (48h)</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-semibold">
+              <tr>
+                <th class="px-6 py-3">Candidat</th>
+                <th class="px-6 py-3">Âge</th>
+                <th class="px-6 py-3">Profession</th>
+                <th class="px-6 py-3">Date</th>
+                <th class="px-6 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr>
+                <td class="px-6 py-4 font-semibold text-navy">Widelene Joseph</td>
+                <td class="px-6 py-4 text-slate-600">24 ans</td>
+                <td class="px-6 py-4 text-slate-600">Gestionnaire de projets</td>
+                <td class="px-6 py-4 text-xs text-slate-400">Aujourd'hui</td>
+                <td class="px-6 py-4 text-right space-x-2">
+                  <button onclick="alert('Candidature approuvée ! Un email d\'invitation sécurisé a été généré.')" class="px-3 py-1 rounded bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">Approuver</button>
+                  <button onclick="alert('Candidature rejetée.')" class="px-3 py-1 rounded bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300">Rejeter</button>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-6 py-4 font-semibold text-navy">Marc-Arthur Célestin</td>
+                <td class="px-6 py-4 text-slate-600">29 ans</td>
+                <td class="px-6 py-4 text-slate-600">Développeur logiciel</td>
+                <td class="px-6 py-4 text-xs text-slate-400">Hier</td>
+                <td class="px-6 py-4 text-right space-x-2">
+                  <button onclick="alert('Candidature approuvée !')" class="px-3 py-1 rounded bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">Approuver</button>
+                  <button onclick="alert('Candidature rejetée.')" class="px-3 py-1 rounded bg-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-300">Rejeter</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-navy-dark text-white border-t border-slate-800 py-12 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-navy flex items-center justify-center text-cyan font-heading font-black text-lg border border-cyan/40">
+            JCI
+          </div>
+          <div>
+            <div class="font-heading font-bold text-white text-base">JCI TABARRE EXCELSIOR</div>
+            <div class="text-xs text-cyan">Junior Chamber International · Haïti</div>
+          </div>
+        </div>
+        <div class="text-xs text-slate-400 text-center md:text-right">
+          © 2026 JCI Tabarre Excelsior. Tous droits réservés.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Tab Switch Script -->
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-100', 'text-navy', 'font-semibold');
+        btn.classList.add('text-slate-600');
+      });
+
+      const target = document.getElementById('tab-' + tabId);
+      if (target) {
+        target.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      const activeBtn = document.getElementById('nav-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-600');
+        activeBtn.classList.add('bg-slate-100', 'text-navy', 'font-semibold');
+      }
+    }
+
+    function handleJoinSubmit(e) {
+      e.preventDefault();
+      document.getElementById('join-alert').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
