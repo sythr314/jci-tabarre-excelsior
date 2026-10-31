@@ -85,7 +85,8 @@ export async function POST(
     return NextResponse.json({ error: inviteError.message }, { status: 500 });
   }
 
-  const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/espace-membre/invitation/${invitation.token}`;
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
+  const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
 
   // Envoyer l'email d'invitation
   await getResend().emails.send({

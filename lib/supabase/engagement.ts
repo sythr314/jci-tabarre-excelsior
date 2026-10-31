@@ -1,9 +1,9 @@
 import type { EngagementScore } from "./types";
 import { getEngagementLevel } from "./types";
-import { createServiceClient } from "./server";
+import { createClient, createServiceClient } from "./server";
 
 export async function calculateEngagementScore(memberId: string): Promise<EngagementScore> {
-  const supabase = createServiceClient();
+  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : await createClient();
   const currentYear = new Date().getFullYear();
 
   const [activitiesResult, attendancesResult, cotisationResult, roleResult] = await Promise.allSettled([
@@ -27,7 +27,7 @@ export async function calculateEngagementScore(memberId: string): Promise<Engage
   const presenceScore = Math.round(presenceRatio * 40);
 
   // Formations : 5 pts par formation complétée, max 25
-  const formationScore = Math.min(memberAttendances, 5) * 5; // simplifié — à affiner avec table dédiée
+  const formationScore = Math.min(memberAttendances, 5) * 5;
 
   const cotisationScore = cotisationPaid ? 20 : 0;
   const roleScore = hasActiveRole ? 15 : 0;

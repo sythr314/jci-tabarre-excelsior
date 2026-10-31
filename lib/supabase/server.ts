@@ -6,7 +6,8 @@ const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://edufaoftopmprbanowis.supabase.co";
 const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_pnKtvG_ZM2zk8pQKzlZZyA_3zCnOj7Q";
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SUPABASE_SERVICE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -58,8 +59,9 @@ export async function requireActiveAdmin(allowedRoles?: AdminRole[]) {
     return { user: null, admin: null, error: "Non autorisé", status: 401 as const };
   }
 
-  const service = createServiceClient();
-  const { data: admin } = await service
+  // Utiliser le client de session (compatible RLS admin_self_read) ou service role si configuré
+  const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : supabase;
+  const { data: admin } = await db
     .from("admin_users")
     .select("id, role, name, is_active")
     .eq("user_id", user.id)

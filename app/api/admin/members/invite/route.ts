@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Échec de génération de l'invitation" }, { status: 500 });
   }
 
-  const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/espace-membre/invitation/${invitation.token}`;
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
+  const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
 
   // Envoyer l'email
   await getResend().emails.send({

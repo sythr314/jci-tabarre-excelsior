@@ -14,7 +14,7 @@ function run(cmd) {
 
 try {
   run('git add -A');
-  run('git commit -m "fix(auth,production): replace placeholder URL fallbacks with live Supabase config and register middleware"');
+  run('git commit -m "fix(netlify,auth): configure https://jci-excelsior.netlify.app in netlify.toml, remove conflicting middleware.ts, and use session client in member space"');
   console.log('Pushing to origin...');
   run('git push origin main');
   console.log('Pushing to other...');

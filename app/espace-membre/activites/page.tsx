@@ -50,7 +50,7 @@ export default async function MemberActivitiesPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/espace-membre/connexion");
 
-  const service = createServiceClient();
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : supabase;
   const { data: member } = await service.from("members").select("id").eq("user_id", user.id).single();
   if (!member) redirect("/espace-membre/connexion");
 
