@@ -30,6 +30,16 @@ const statusColors: Record<ActivityStatus, string> = {
   cancelled: "bg-red-50 text-red-600",
 };
 
+type AttendanceMember = { first_name: string; last_name: string; email: string };
+type AttendanceRow = {
+  id: string;
+  attended: boolean;
+  source: string;
+  external_email: string | null;
+  external_name: string | null;
+  members: AttendanceMember | null;
+};
+
 export default async function ActiviteDetailPage({
   params,
 }: {
@@ -59,23 +69,27 @@ export default async function ActiviteDetailPage({
       .eq("attended", true),
   ]);
 
-  type AttendanceMember = { first_name: string; last_name: string; email: string };
-  type AttendanceRow = {
+  const rawAttendances = (
+    attendancesRes.status === "fulfilled" ? (attendancesRes.value.data ?? []) : []
+  ) as Array<{
     id: string;
     attended: boolean;
     source: string;
     external_email: string | null;
     external_name: string | null;
-    members: AttendanceMember | null;
-  };
+    members: unknown;
+  }>;
 
-  // Sans types générés, Supabase infère la jointure `members` comme un tableau ;
-  // c'est une relation many-to-one, on normalise donc en objet unique.
-  const attendances: AttendanceRow[] = (
-    attendancesRes.status === "fulfilled" ? (attendancesRes.value.data ?? []) : []
-  ).map((row) => {
-    const m = row.members as unknown as AttendanceMember | AttendanceMember[] | null;
-    return { ...row, members: Array.isArray(m) ? (m[0] ?? null) : m };
+  const attendances: AttendanceRow[] = rawAttendances.map((row) => {
+    const m = row.members as AttendanceMember | AttendanceMember[] | null;
+    return {
+      id: row.id,
+      attended: row.attended,
+      source: row.source,
+      external_email: row.external_email,
+      external_name: row.external_name,
+      members: Array.isArray(m) ? (m[0] ?? null) : m,
+    };
   });
   const presentCount = countRes.status === "fulfilled" ? (countRes.value.count ?? 0) : 0;
 
@@ -201,7 +215,7 @@ export default async function ActiviteDetailPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {attendances.map((a) => {
+                    {attendances.map((a: AttendanceRow) => {
                       const name = a.members
                         ? `${a.members.first_name} ${a.members.last_name}`
                         : a.external_name ?? a.external_email ?? "—";
@@ -281,13 +295,13 @@ export default async function ActiviteDetailPage({
               <div className="flex justify-between">
                 <dt className="text-gray-400">Membres JCI</dt>
                 <dd className="font-medium text-navy">
-                  {attendances.filter((a: { members?: unknown }) => a.members).length}
+                  {attendances.filter((a: AttendanceRow) => a.members).length}
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-gray-400">Externes</dt>
                 <dd className="font-medium text-navy">
-                  {attendances.filter((a: { members?: unknown }) => !a.members).length}
+                  {attendances.filter((a: AttendanceRow) => !a.members).length}
                 </dd>
               </div>
             </dl>

@@ -4,6 +4,7 @@ import { calculateEngagementScore } from "@/lib/supabase/engagement";
 import { ENGAGEMENT_LEVELS } from "@/lib/supabase/types";
 import type { Metadata } from "next";
 import { ConfirmDuesButton } from "./ConfirmDuesButton";
+import { AssignRoleButton } from "./AssignRoleButton";
 
 export const metadata: Metadata = { title: "Profil membre — Admin JCI" };
 
@@ -109,7 +110,10 @@ export default async function MembreDetailPage({ params }: { params: Promise<{ i
 
         {/* Rôles et commissions */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="font-heading font-bold text-navy mb-4">Rôles & commissions</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-heading font-bold text-navy">Rôles & commissions</h2>
+            <AssignRoleButton memberId={id} />
+          </div>
           {roles.length === 0 ? (
             <p className="text-gray-400 text-sm">Aucun rôle enregistré</p>
           ) : (
