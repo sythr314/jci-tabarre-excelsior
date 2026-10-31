@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { safeUrl } from "@/lib/utils/security";
 import type { ActivityType, ActivityStatus } from "@/lib/supabase/types";
 import { ImportButton } from "./ImportButton";
+import { ActivityStatusActions } from "./ActivityStatusActions";
 
 export const metadata: Metadata = { title: "Détail activité — Admin JCI" };
 
@@ -129,12 +130,15 @@ export default async function ActiviteDetailPage({
             </span>
           </div>
         </div>
-        <Link
-          href={`/ops-jci-htx/activites/${id}/modifier`}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-        >
-          Modifier
-        </Link>
+        <div className="flex flex-col sm:flex-row items-end gap-3">
+          <ActivityStatusActions activityId={id} currentStatus={act.status} />
+          <Link
+            href={`/ops-jci-htx/activites/${id}/modifier`}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Modifier
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

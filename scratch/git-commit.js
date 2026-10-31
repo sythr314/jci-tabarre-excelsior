@@ -14,7 +14,7 @@ function run(cmd) {
 
 try {
   run('git add -A');
-  run('git commit -m "feat(public): display authentic JCI initiatives on public site without authentication"');
+  run('git commit -m "feat(auth,admin,tasks): reset credentials, add password recovery, activity status actions, task delegation, and audit log"');
   console.log('Pushing to origin...');
   run('git push origin main');
   console.log('Pushing to other...');

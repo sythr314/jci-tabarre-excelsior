@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -62,7 +63,7 @@ export function AdminLoginForm() {
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-      <h1 className="font-heading font-bold text-white text-xl mb-6">Connexion</h1>
+      <h1 className="font-heading font-bold text-white text-xl mb-6">Connexion Administrateur</h1>
 
       {error && (
         <div role="alert" className="bg-error/10 border border-error/20 rounded-lg p-3 mb-4 text-sm text-error">
@@ -84,7 +85,15 @@ export function AdminLoginForm() {
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm text-white/60 mb-1">Mot de passe</label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="password" className="block text-sm text-white/60">Mot de passe</label>
+            <Link
+              href="/auth/mot-de-passe-oublie?from=admin"
+              className="text-xs text-cyan hover:underline transition-colors"
+            >
+              Mot de passe oublié ?
+            </Link>
+          </div>
           <input
             id="password"
             name="password"

@@ -10,9 +10,10 @@ export const metadata = {
 
 const navLinks = [
   { href: "/espace-membre/tableau-de-bord", label: "Tableau de bord" },
-  { href: "/espace-membre/profil",           label: "Mon profil" },
+  { href: "/espace-membre/taches",           label: "Mes tâches" },
   { href: "/espace-membre/activites",        label: "Mes activités" },
   { href: "/espace-membre/formations",       label: "Mes formations" },
+  { href: "/espace-membre/profil",           label: "Mon profil" },
 ];
 
 export default async function MemberLayout({ children }: { children: React.ReactNode }) {

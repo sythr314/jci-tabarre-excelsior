@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
@@ -45,7 +46,15 @@ export function MemberLoginForm() {
         <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
       </div>
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-navy mb-1">Mot de passe</label>
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-navy">Mot de passe</label>
+          <Link
+            href="/auth/mot-de-passe-oublie?from=member"
+            className="text-xs text-cyan hover:underline transition-colors"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </div>
         <input id="password" name="password" type="password" autoComplete="current-password" required className={inputClass} />
       </div>
       <Button type="submit" variant="primary" className="w-full" disabled={loading}>
