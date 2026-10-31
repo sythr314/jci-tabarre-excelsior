@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 
-export default function ReinitialiserMotDePassePage() {
-  const router = useRouter();
+function ReinitialiserMotDePasseForm() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
   const isAdmin = from === "admin";
@@ -18,26 +17,13 @@ export default function ReinitialiserMotDePassePage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    // Vérifier si une session de récupération est active
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setReady(true);
-      } else {
-        // Supabase peut aussi déclencher l'événement onAuthStateChange pour PASSWORD_RECOVERY
-        const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-          if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-            setReady(true);
-          }
-        });
-        // Laisser 2 secondes pour parser le token du hash
-        setTimeout(() => setReady(true), 1500);
-        return () => authListener.subscription.unsubscribe();
-      }
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      // Écoute active pour récupérer le token du hash URL (#access_token=...)
     });
+    return () => authListener.subscription.unsubscribe();
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -174,5 +160,13 @@ export default function ReinitialiserMotDePassePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ReinitialiserMotDePassePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Spinner className="text-navy" /></div>}>
+      <ReinitialiserMotDePasseForm />
+    </Suspense>
   );
 }

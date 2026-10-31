@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 
-export default function MotDePasseOubliePage() {
+function MotDePasseOublieForm() {
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
   const isAdmin = from === "admin";
@@ -131,5 +131,13 @@ export default function MotDePasseOubliePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MotDePasseOubliePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><Spinner className="text-navy" /></div>}>
+      <MotDePasseOublieForm />
+    </Suspense>
   );
 }
