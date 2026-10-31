@@ -20,14 +20,20 @@ export function MemberLoginForm() {
     setError(null);
 
     const form = e.currentTarget;
-    const email    = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const email    = (form.elements.namedItem("email") as HTMLInputElement).value.trim();
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
-      setError("Email ou mot de passe incorrect.");
+      if (authError.message?.includes("Invalid login credentials")) {
+        setError("Email ou mot de passe incorrect.");
+      } else if (authError.message?.toLowerCase().includes("fetch")) {
+        setError("Erreur de connexion au serveur d'authentification. Veuillez vérifier votre connexion.");
+      } else {
+        setError(authError.message || "Email ou mot de passe incorrect.");
+      }
       setLoading(false);
       return;
     }

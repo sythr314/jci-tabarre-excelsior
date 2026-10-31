@@ -2,12 +2,18 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { AdminRole } from "./types";
 
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://edufaoftopmprbanowis.supabase.co";
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_pnKtvG_ZM2zk8pQKzlZZyA_3zCnOj7Q";
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder",
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -33,8 +39,8 @@ export function createServiceClient() {
     throw new Error("createServiceClient must only be called on the server");
   }
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-key",
+    SUPABASE_URL,
+    SUPABASE_SERVICE_KEY,
     {
       cookies: { getAll: () => [], setAll: () => {} },
     }

@@ -14,7 +14,7 @@ function run(cmd) {
 
 try {
   run('git add -A');
-  run('git commit -m "feat(auth,admin,tasks): reset credentials, add password recovery, activity status actions, task delegation, and audit log"');
+  run('git commit -m "fix(auth,production): replace placeholder URL fallbacks with live Supabase config and register middleware"');
   console.log('Pushing to origin...');
   run('git push origin main');
   console.log('Pushing to other...');

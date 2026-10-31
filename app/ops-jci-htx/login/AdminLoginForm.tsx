@@ -30,29 +30,35 @@ export function AdminLoginForm() {
     setError(null);
 
     const form = e.currentTarget;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim();
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (authError) {
+    if (authError || !authData.user) {
       setAttempts((n) => n + 1);
-      setError("Identifiants incorrects.");
+      if (authError?.message?.includes("Invalid login credentials")) {
+        setError("Email ou mot de passe incorrect.");
+      } else if (authError?.message?.toLowerCase().includes("fetch")) {
+        setError("Erreur de connexion au serveur d'authentification. Veuillez vérifier votre connexion.");
+      } else {
+        setError(authError?.message ?? "Identifiants incorrects.");
+      }
       setLoading(false);
       return;
     }
 
-    // Vérifier que c'est bien un admin (double vérification côté client)
-    const { data: adminCheck } = await supabase
+    // Vérifier que c'est bien un admin (par user_id ou email)
+    const { data: adminCheck, error: adminErr } = await supabase
       .from("admin_users")
       .select("role, is_active")
-      .eq("email", email)
+      .or(`user_id.eq.${authData.user.id},email.ilike.${email}`)
       .single();
 
-    if (!adminCheck || !adminCheck.is_active) {
+    if (adminErr || !adminCheck || !adminCheck.is_active) {
       await supabase.auth.signOut();
-      setError("Accès non autorisé.");
+      setError("Accès réservé aux administrateurs actifs du Bureau JCI.");
       setLoading(false);
       return;
     }
