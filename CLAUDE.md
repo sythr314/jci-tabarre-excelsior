@@ -1,285 +1,204 @@
 @AGENTS.md
 
-# JCI Tabarre Excelsior — Documentation complète du projet
+# Architecture Complète du Site — JCI Tabarre Excelsior & JCI National (`CLAUDE.md`)
 
-## Présentation générale
-Site web institutionnel et plateforme de gestion membrale pour **JCI Tabarre Excelsior**, une locale de la Junior Chamber International (JCI) implantée à Tabarre, Haïti. Le site remplit trois fonctions :
-1. **Vitrine publique** — présentation de l'organisation, des initiatives, formulaire d'adhésion, contact
-2. **Portail membres** — tableau de bord personnel, score d'engagement, suivi des cotisations et activités
-3. **Panel d'administration** — gestion des membres, invitations, activités, import Google Sheets
+## 1. Présentation Générale
 
-## À propos de la JCI
-La Junior Chamber International est une ONG mondiale regroupant des jeunes adultes de **18 à 40 ans** engagés dans le développement du leadership et de l'impact communautaire. JCI Tabarre Excelsior opère selon 5 axes : **Communauté · Entrepreneuriat · Formation/Leadership · Santé · Environnement**.
+Plateforme web institutionnelle, portail membres et système d'administration (ERP associatif) conçu pour **JCI Tabarre Excelsior** et extensible à **JCI National (JCI Haïti)**.
 
----
-
-## Stack technique
-
-| Couche | Technologie |
-|--------|-------------|
-| Framework | Next.js 16 (App Router, Turbopack) |
-| Language | TypeScript 5 |
-| Styles | Tailwind CSS 4 + PostCSS |
-| CMS | Sanity 6 |
-| Base de données | Supabase (PostgreSQL) |
-| Auth | Supabase Auth |
-| Email | Resend |
-| Rate limiting | Upstash Redis |
-| Analytics | Vercel Analytics |
-| Formulaires | React Hook Form 7 + Zod 4 |
-| Internationalisation | next-intl |
-| Import présences | googleapis (Google Sheets) |
-| Hébergement | Vercel |
+La plateforme s'articule autour de **3 espaces** :
+1. **Vitrine Publique (`app/(public)/`)** : Présentation de l'organisation, initiatives et réalisations (accessibles sans connexion), formulaire d'adhésion (`/join`), formulaire de contact (`/contact`).
+2. **Portail Membres (`app/espace-membre/`)** : Tableau de bord personnel, score d'engagement sur 100 pts, inscriptions aux activités et formations, gestion des tâches assignées par les commissions, suivi des cotisations et édition du profil.
+3. **Panel d'Administration Comité Directeur (`app/ops-jci-htx/`)** : Tableau de bord exécutif en temps réel, examen et approbation/rejet des demandes d'adhésion, gestion des membres et attribution des rôles JCI, création/archivage d'activités, import de présences Google Sheets, délégation de tâches par commission et journal d'audit complet (traçabilité).
 
 ---
 
-## Architecture des routes
+## 2. Stack Technique
 
-### Pages publiques (`app/(public)/`)
-| Route | Description |
-|-------|-------------|
-| `/` | Accueil : Hero, Statistiques, Mission, Initiatives récentes, CTA |
-| `/about` | Histoire, bureau actuel, **galerie des présidents passés** |
-| `/initiatives` | Toutes les initiatives (filtrable par catégorie) |
-| `/initiatives/[slug]` | Détail d'une initiative avec galerie d'images |
-| `/join` | Formulaire d'adhésion complet (11 champs, validation âge 18–40) |
-| `/contact` | Formulaire de contact |
-
-### Portail membres (`app/espace-membre/`)
-| Route | Description |
-|-------|-------------|
-| `/espace-membre/connexion` | Connexion avec email/mot de passe (Supabase Auth) |
-| `/espace-membre/tableau-de-bord` | Score d'engagement, cotisations, activités à venir |
-| `/espace-membre/invitation/[token]` | Activation du compte via token (valide 48 h) |
-
-### Panel admin (`app/ops-jci-htx/`)
-| Route | Description |
-|-------|-------------|
-| `/ops-jci-htx/login` | Connexion administrateur |
-| `/ops-jci-htx/dashboard` | KPIs, alertes (candidatures en attente), activités |
-| `/ops-jci-htx/membres` | Liste membres avec filtres (statut, recherche) |
-| `/ops-jci-htx/membres/[id]` | Profil : engagement, cotisations, présences, rôles |
-
-### API (`app/api/`)
-| Endpoint | Description |
-|----------|-------------|
-| `POST /api/join` | Candidature → emails Resend (admin + confirmation candidat) |
-| `POST /api/contact` | Contact → email Resend (admin) |
-| `POST /api/revalidate` | Webhook Sanity pour revalidation ISR |
-| `POST /api/admin/members/invite` | Invitation membre → email + token unique |
-| `POST /api/admin/members/[id]/dues` | Confirmation paiement cotisation |
-| `POST /api/admin/activities/[id]/import` | Import présences depuis Google Sheets |
-| `/api/auth/accept-invitation` | Activation compte via token |
+| Couche | Technologie | Détails |
+| :--- | :--- | :--- |
+| **Framework** | Next.js 16.2.9 (App Router) | Turbopack en build (`next build`), Webpack en dev (`next dev --webpack`) |
+| **Langage** | TypeScript 5 | Typage strict bout-en-bout |
+| **Styles & UI** | Tailwind CSS 4 + PostCSS | Charte JCI : Navy (`#1B2454` / `#1e3a8a`), Cyan (`#45C4E0` / `#06b6d4`), Montserrat & Inter |
+| **Base de données** | Supabase (PostgreSQL) | Row Level Security (RLS) activé sur toutes les tables |
+| **Authentification** | Supabase Auth (`@supabase/ssr`) | Cookies HTTP-only gérés par `proxy.ts`, récupération de mot de passe intégrée |
+| **CMS Hybride** | Sanity Client + Fallback statique | Lecture Sanity avec repli automatique sur les initiatives authentiques JCI (`defaultInitiatives`) |
+| **Emails** | Resend (`lib/email/resend.ts`) | Notifications d'adhésion, invitations membres avec token 48h (tolérant au mode démo) |
+| **Rate Limiting** | Upstash Redis (`lib/utils/rateLimit.ts`) | Protection anti-abus sur `/api/join`, `/api/contact`, `/api/auth/accept-invitation` |
+| **Validation** | React Hook Form 7 + Zod 4 | Validation client & serveur des schémas (`lib/utils/schemas.ts`) |
+| **Déploiement** | Netlify (`netlify.toml`) | URL de production : `https://jci-excelsior.netlify.app` |
 
 ---
 
-## Proxy / Middleware (`proxy.ts`)
-Protège les routes privées via Supabase Auth. **L'export doit s'appeler `proxy` (Next.js 16 — anciennement `middleware`).**
-- `/ops-jci-htx/*` → accès réservé aux `admin_users` actifs ; injecte `x-admin-role` dans les headers
-- `/espace-membre/*` → accès réservé aux membres actifs ; injecte `x-member-id` dans les headers
-- Les assets `/_next/*`, `/api/*` et les fichiers statiques sont ignorés
+## 3. Arborescence Complète du Projet
 
----
-
-## CMS Sanity — Schémas de contenu (`sanity/schemas/`)
-
-### `siteSettings`
-Paramètres globaux : titre hero, sous-titre, email de contact, adresse, réseaux sociaux (Facebook, Instagram, LinkedIn, Twitter).
-
-### `initiative`
-Projet communautaire.
-- Champs principaux : title, slug, category, summary, description (blockContent riche), coverImage, gallery (max 15 images), startDate, endDate
-- status : `ongoing` | `completed` | `planned`
-- Données d'impact : results (texte), beneficiaries (nombre)
-- Catégories : communaute · entrepreneuriat · formation · sante · environnement
-
-### `teamMember`
-Membre du bureau actuel.
-- Champs : name, role, photo (hotspot), bio, order (tri)
-
-### `pastPresident`
-**Galerie historique des présidents.** Affiché sur `/about` trié par mandat décroissant.
-- Champs : name, photo (hotspot), mandateStart (année), mandateEnd (année), bio, achievements (liste de réalisations), quote (citation)
-
-### `blockContent`
-Contenu rich text réutilisable (Portable Text Sanity).
-
-**ISR :** Tout le contenu Sanity est revalidé automatiquement toutes les **3 600 secondes**.
-**Revalidation manuelle :** via webhook Sanity → `POST /api/revalidate`
-
----
-
-## Base de données Supabase (`lib/supabase/types.ts`)
-
-### `members`
-```
-user_id, first_name, last_name, email, phone, profession, bio
-status: pending | active | inactive | alumni
-jci_level, community_role, join_date
-```
-
-### `admin_users`
-```
-user_id, name, email, is_active
-role: president | secretaire | charge_formation | charge_communication
-```
-
-### `activities`
-```
-title, slug, description, type, activity_date, location
-registration_link, google_sheet_id, capacity, status
-```
-
-### `attendances`
-```
-activity_id, member_id, attended (bool)
-source: google_form | manual | site
-imported_at
-```
-
-### `dues`
-```
-member_id, year, amount, paid_at, confirmed_by
-```
-
-### `member_roles`
-```
-member_id, role_title, commission, start_date, end_date, is_current
-```
-
-### `member_invitations`
-```
-token (unique), email, expires_at (48 h), used_at
-```
-
-### `project_members`
-```
-member_id, project_id
+```text
+jci-tabarre-excelsior/
+├── app/
+│   ├── (public)/                        # Vitrine publique (sans authentification)
+│   │   ├── page.tsx                     # Accueil : Hero, Stats, Mission, Initiatives, CTA
+│   │   ├── about/page.tsx               # Histoire, Bureau (CDL), Galerie des Past-Présidents
+│   │   ├── initiatives/
+│   │   │   ├── page.tsx                 # Catalogue filtrable des initiatives (InitiativesFilterList)
+│   │   │   └── [slug]/page.tsx          # Détail complet d'une initiative + résultats d'impact
+│   │   ├── join/page.tsx                # Formulaire d'adhésion (18–40 ans)
+│   │   └── contact/page.tsx             # Formulaire de contact
+│   │
+│   ├── auth/                            # Flux transverses d'authentification
+│   │   ├── mot-de-passe-oublie/page.tsx       # Demande de lien de réinitialisation (Admin & Membre)
+│   │   └── reinitialiser-mot-de-passe/page.tsx# Saisie du nouveau mot de passe via token Supabase
+│   │
+│   ├── espace-membre/                   # Portail privé des Membres JCI
+│   │   ├── layout.tsx                   # Barre de navigation membre & vérification de session
+│   │   ├── connexion/                   # Connexion membre (MemberLoginForm)
+│   │   ├── invitation/[token]/          # Activation initiale du compte (token 48h)
+│   │   ├── tableau-de-bord/page.tsx     # Score d'engagement (100 pts), cotisations, activités
+│   │   ├── activites/page.tsx           # Calendrier & inscription en 1 clic aux activités
+│   │   ├── formations/page.tsx          # Parcours de formation JCI & progression
+│   │   ├── taches/page.tsx              # Missions confiées au membre & mise à jour de statut
+│   │   └── profil/page.tsx              # Mise à jour des informations personnelles & bio
+│   │
+│   ├── ops-jci-htx/                     # Panel d'Administration (Comité Directeur)
+│   │   ├── layout.tsx                   # Sidebar admin & contrôle d'accès par rôle
+│   │   ├── login/                       # Connexion administrateur (AdminLoginForm)
+│   │   ├── dashboard/page.tsx           # KPIs temps réel, demandes d'adhésion récentes, alertes
+│   │   ├── candidatures/
+│   │   │   ├── page.tsx                 # Liste et compteurs des candidatures (En attente/Approuvées/Rejetées)
+│   │   │   └── [id]/page.tsx            # Examen détaillé + boutons Approuver / Rejeter (ReviewButtons)
+│   │   ├── membres/
+│   │   │   ├── page.tsx                 # Annuaire membres, filtres, invitation directe
+│   │   │   └── [id]/page.tsx            # Fiche membre : cotisations, rôles JCI (AssignRoleButton), présences
+│   │   ├── activites/
+│   │   │   ├── page.tsx                 # Gestion des activités, réunions et formations
+│   │   │   ├── nouveau/page.tsx         # Création d'une activité
+│   │   │   └── [id]/                    # Détail, archivage/statut (ActivityStatusActions), import Sheets, édition
+│   │   ├── taches/page.tsx              # Délégation des tâches par commission JCI (TaskListClient)
+│   │   └── audit/page.tsx               # Journal d'audit & traçabilité (AuditLogClient)
+│   │
+│   └── api/                             # Routes API Backend (Route Handlers)
+│       ├── join/route.ts                # POST : Enregistrement candidature en base + emails Resend
+│       ├── contact/route.ts             # POST : Envoi message de contact
+│       ├── revalidate/route.ts          # POST : Webhook de revalidation ISR Sanity
+│       ├── auth/accept-invitation/      # POST : Création compte Auth + activation membre
+│       ├── member/
+│       │   ├── profile/route.ts         # PUT : Mise à jour profil par le membre
+│       │   ├── activities/[id]/register/# POST/DELETE : Inscription/désinscription activité
+│       │   └── tasks/                   # GET/PATCH : Lecture et avancement des tâches du membre
+│       └── admin/
+│           ├── applications/[id]/
+│           │   ├── approve/route.ts     # POST : Approbation candidature -> création membre + token 48h + audit
+│           │   └── reject/route.ts      # POST : Rejet candidature + motif + audit
+│           ├── members/
+│           │   ├── invite/route.ts      # POST : Invitation directe d'un membre + audit
+│           │   └── [id]/
+│           │       ├── dues/route.ts    # POST : Validation cotisation annuelle + audit
+│           │       └── role/route.ts    # POST : Attribution de rôle (CDL / Commission) + audit
+│           ├── activities/
+│           │   ├── route.ts             # POST : Création d'activité + audit
+│           │   └── [id]/
+│           │       ├── route.ts         # PUT/DELETE : Modification / archivage / suppression + audit
+│           │       └── import/route.ts  # POST : Import présences depuis Google Sheets
+│           └── tasks/
+│               ├── route.ts             # GET/POST : Liste et assignation de tâches + audit
+│               └── [id]/route.ts        # PUT/DELETE : Validation / modification / suppression de tâche + audit
+│
+├── components/
+│   ├── admin/Sidebar.tsx                # Navigation latérale du panel d'administration
+│   ├── layout/                          # Header, Footer, MobileDrawer
+│   ├── sections/                        # HeroSection, StatsSection, InitiativesFilterList, JoinForm, etc.
+│   └── ui/                              # Button, Card, Badge, SectionHeader, Spinner, SanityImage
+│
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts                    # Client Supabase navigateur (@supabase/ssr)
+│   │   ├── server.ts                    # createClient(), createServiceClient(), requireActiveAdmin()
+│   │   ├── engagement.ts                # Calcul du score d'engagement sur 100 points
+│   │   └── types.ts                     # Interfaces TypeScript de la base de données
+│   ├── sanity/                          # Client Sanity + requêtes + données de repli (defaultInitiatives)
+│   ├── email/resend.ts                  # Instance différée Resend
+│   └── utils/                           # schemas.ts (Zod), security.ts (escapeHtml, UUID, IP), rateLimit.ts
+│
+├── supabase/migrations/                 # Migrations SQL ordonnées
+│   ├── 001_initial_schema.sql           # Tables initiales + RLS de base
+│   ├── 002_member_applications.sql      # Table member_applications + colonnes profil
+│   ├── 003_admin_self_read.sql          # Policy RLS admin_self_read sur admin_users
+│   └── 004_tasks_and_delegation.sql     # Table tasks + policies RLS tâches
+│
+├── proxy.ts                             # Middleware Next.js 16 de protection des routes
+├── netlify.toml                         # Configuration de build et d'environnement Netlify
+├── plan.md                              # Feuille de route vers JCI National
+└── correct.md                           # Post-mortem des erreurs et règles anti-régression
 ```
 
 ---
 
-## Score d'engagement (`lib/supabase/engagement.ts`)
-Score calculé sur **100 points**, 4 critères pondérés :
+## 4. Architecture de la Base de Données Supabase & Sécurité RLS
 
-| Critère | Points |
-|---------|--------|
-| Présence aux activités | 40 |
-| Formations complétées | 25 |
-| Cotisation payée (année en cours) | 20 |
-| Rôle actif (commission ou projet) | 15 |
+### 4.1. Tables Principales
 
-**Niveaux :** Inactif (0–30) · Actif (31–60) · Très actif (61–85) · Champion (86–100)
+1. **`members`** : Profil complet des membres (`user_id`, `first_name`, `last_name`, `email`, `phone`, `birth_date`, `commune`, `profession`, `education_level`, `interests`, `status` [`pending` | `active` | `inactive` | `alumni`], `jci_level` [`member` | `senator` | `alumnus`], `community_role`, `join_date`).
+2. **`member_applications`** : Demandes d'adhésion soumises depuis `/join` (`status` : `pending` | `approved` | `rejected`, `reviewed_by`, `reviewed_at`, `review_notes`, `member_id`).
+3. **`admin_users`** : Comptes du Comité Directeur (`user_id`, `name`, `email`, `role` [`president` | `secretaire` | `charge_formation` | `charge_communication` | `tresorier`], `is_active`).
+4. **`activities`** : Formations, réunions, activités et initiatives (`type`, `status` [`upcoming` | `ongoing` | `completed` | `cancelled`], `activity_date`, `location`, `capacity`, `google_sheet_id`).
+5. **`attendances`** : Émargement et inscriptions aux activités (`activity_id`, `member_id`, `attended`, `source` [`google_form` | `manual` | `site`]).
+6. **`tasks`** : Répartition des tâches par commission JCI (`title`, `description`, `commission`, `assigned_to`, `assigned_by`, `activity_id`, `priority` [`basse` | `normale` | `haute` | `urgente`], `status` [`a_faire` | `en_cours` | `termine` | `valide`], `due_date`).
+7. **`dues`** : Cotisations annuelles des membres (`member_id`, `year`, `amount`, `paid_at`, `confirmed_by`).
+8. **`member_roles`** : Historique des postes occupés par chaque membre (`role_title`, `commission`, `start_date`, `end_date`, `is_current`).
+9. **`member_invitations`** : Tokens d'activation valables 48h envoyés lors de l'approbation d'une candidature ou d'une invitation directe.
+10. **`audit_logs`** : Journal infalsifiable de toutes les actions administratives (`admin_id`, `action`, `target_type`, `target_id`, `details` JSONB, `ip_address`, `created_at`).
 
----
+### 4.2. Modèle de Sécurité (Proxy + RLS + Service Role)
 
-## Formulaire d'adhésion (`/join`) — Champs complets
-
-| Champ | Requis | Validation |
-|-------|--------|-----------|
-| Prénom | Oui | min 2 chars |
-| Nom | Oui | min 2 chars |
-| Date de naissance | Oui | âge 18–40 ans (validé côté client et serveur) |
-| Commune de résidence | Oui | min 2 chars |
-| Adresse email | Oui | format email valide |
-| Téléphone | Non | libre |
-| Profession / Secteur | Non | libre |
-| Niveau d'études | Non | enum : secondaire / bac / licence / master / doctorat / autre |
-| Domaines d'intérêt | Oui | checkboxes, min 1 sélectionné |
-| Comment avez-vous connu JCI ? | Oui | enum : réseaux sociaux / bouche à oreille / membre JCI / événement / site web / autre |
-| Motivation | Oui | 20–1 000 chars |
-
-**Protections :** honeypot invisible + rate limiting Upstash Redis.
-**Emails :** notification admin (avec tous les champs) + email de confirmation au candidat (Resend).
+- **`proxy.ts` (Middleware Next.js 16)** :
+  - Intercepte toutes les requêtes vers `/ops-jci-htx/*` et `/espace-membre/*`.
+  - Vérifie la session Supabase Auth et l'appartenance active à `admin_users` pour `/ops-jci-htx/*`.
+  - Injecte `x-admin-role` et `x-admin-name` dans les en-têtes de requête pour éviter les doubles requêtes réseau dans `app/ops-jci-htx/layout.tsx`.
+- **`requireActiveAdmin(allowedRoles?)` (`lib/supabase/server.ts`)** :
+  - Vérifie systématiquement côté serveur dans chaque route API `/api/admin/*` que l'appelant est connecté, présent dans `admin_users` avec `is_active = true`, et possède le rôle requis.
+- **Séparation des clients Supabase (`lib/supabase/server.ts`)** :
+  - `createClient()` : Client de session utilisant les cookies de l'utilisateur connecté (soumis aux politiques RLS `member_self_read`, `admin_self_read`, etc.).
+  - `createServiceClient()` : Client serveur privilégié utilisant `SUPABASE_SERVICE_ROLE_KEY` (validée par `HAS_VALID_SERVICE_KEY`) pour les opérations administratives et l'insertion publique sécurisée dans `member_applications`.
 
 ---
 
-## Variables d'environnement (`.env.local`)
+## 5. Flux Fonctionnels Clés
 
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+### 5.1. Flux d'Adhésion et d'Activation d'un Nouveau Membre
+```mermaid
+sequenceDiagram
+    participant C as Candidat (/join)
+    participant API as POST /api/join
+    participant DB as Supabase (member_applications)
+    participant Admin as Admin (/ops-jci-htx/dashboard)
+    participant AppAPI as POST /api/admin/applications/[id]/approve
 
-# Sanity
-NEXT_PUBLIC_SANITY_PROJECT_ID=
-NEXT_PUBLIC_SANITY_DATASET=production
-SANITY_API_TOKEN=
-
-# Email (Resend)
-RESEND_API_KEY=re_...
-EMAIL_FROM=JCI Tabarre <noreply@jci-tabarre.ht>
-EMAIL_TO=admin@jci-tabarre.ht
-
-# Rate limiting (Upstash Redis)
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# Google Sheets (import présences activités)
-GOOGLE_SERVICE_ACCOUNT_EMAIL=
-GOOGLE_PRIVATE_KEY=
+    C->>API: Soumet le formulaire d'adhésion
+    API->>DB: INSERT INTO member_applications (status='pending')
+    API->>Admin: revalidatePath('/ops-jci-htx/dashboard')
+    Admin->>Admin: Voit la candidature dans "Demandes d'adhésion récentes"
+    Admin->>AppAPI: Clique sur "Examiner" puis "Approuver et inviter"
+    AppAPI->>DB: Crée le membre (status='pending') + token d'invitation (48h)
+    AppAPI->>DB: UPDATE member_applications SET status='approved' + INSERT audit_logs
+    C->>C: Ouvre /espace-membre/invitation/[token] et crée son mot de passe
+    C->>DB: Compte Auth créé + Membre passe à status='active'
 ```
 
----
-
-## Commandes
-
-```bash
-npm run dev      # Développement — http://localhost:3000
-npm run build    # Build de production
-npm run start    # Serveur de production
-npm run lint     # ESLint
-```
+### 5.2. Calcul du Score d'Engagement (`lib/supabase/engagement.ts`)
+Calculé dynamiquement sur **100 points** :
+- **Présence aux activités** : jusqu'à **40 points** (au prorata des activités terminées).
+- **Formations complétées** : jusqu'à **25 points** (5 pts par formation, max 5).
+- **Cotisation annuelle à jour** : **20 points**.
+- **Rôle actif (Commission ou Comité)** : **15 points**.
+- **Paliers** : *Inactif* (0–30) · *Actif* (31–60) · *Très actif* (61–85) · *Champion* (86–100).
 
 ---
 
-## Composants UI (`components/`)
+## 6. Déploiement & Variables d'Environnement (Netlify)
 
-### `components/ui/`
-| Composant | Usage |
-|-----------|-------|
-| `Button` | Bouton primaire/secondaire/ghost/danger |
-| `Card` | Carte avec ombre et bordure |
-| `Badge` | Label coloré (statut, catégorie) |
-| `SectionHeader` | Titre + sous-titre de section, variante light (fond sombre) |
-| `Spinner` | Indicateur de chargement |
-| `SanityImage` | Wrapper Next.js Image pour assets Sanity (avec hotspot) |
-
-### `components/sections/`
-| Composant | Page |
-|-----------|------|
-| `HeroSection` | Accueil |
-| `StatsSection` | Accueil |
-| `MissionSection` | Accueil + À propos |
-| `CallToAction` | Accueil + À propos |
-| `InitiativeCard` | Liste des initiatives |
-| `JoinForm` | `/join` |
-| `ContactForm` | `/contact` |
-
-### `components/layout/`
-`Header`, `Footer`, `MobileDrawer`
-
-### `components/admin/`
-`Sidebar` (panel admin)
-
----
-
-## Charte graphique
-- **Couleur principale :** Navy `#1e3a8a`
-- **Couleur accent :** Cyan `#06b6d4`
-- **Succès / Erreur / Avertissement :** vert / rouge / ambre
-- **Polices :** Montserrat (titres `font-heading`), Inter (corps)
-- **Coins arrondis :** `rounded-lg` (éléments), `rounded-2xl` (cartes)
-
----
-
-## Flux utilisateur clés
-
-```
-Candidat → /join → JoinForm → POST /api/join → email admin + email confirmation
-Admin → approuve → POST /api/admin/members/invite → email invitation avec token
-Nouveau membre → /espace-membre/invitation/[token] → ActivationForm → dashboard
-Membre connecté → /espace-membre/tableau-de-bord → score engagement, activités, cotisations
-Admin → /ops-jci-htx/dashboard → KPIs, membres en attente, import présences
-```
+- **URL de production** : `https://jci-excelsior.netlify.app`
+- **Fichier de configuration** : `netlify.toml`
+  - Configure `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+  - Configure `SECRETS_SCAN_OMIT_KEYS` et `SECRETS_SCAN_OMIT_PATHS` pour éviter les faux positifs du scanner Netlify sur les variables publiques.
+- **Variables secrètes à renseigner dans l'interface Netlify (*Site configuration > Environment variables*)** :
+  - `SUPABASE_SERVICE_ROLE_KEY` : Clé secrète `sb_secret_...` (indispensable en production pour que le serveur puisse insérer et lire `member_applications`, `audit_logs`, etc. en contournant RLS).
+  - `RESEND_API_KEY` : Clé API Resend (`re_...`) pour l'envoi effectif des e-mails Transactionnels.
