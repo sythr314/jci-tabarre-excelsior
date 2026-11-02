@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ADMIN_PREFIX = "/ops-jci-htx";
+const ADMIN_LOGIN = `${ADMIN_PREFIX}/login`;
+const MEMBER_PREFIX = "/espace-membre";
+const MEMBER_LOGIN = `${MEMBER_PREFIX}/connexion`;
+const MEMBER_INVITE = `${MEMBER_PREFIX}/invitation`;
+
 const DEFAULT_SUPABASE_URL = "https://edufaoftopmprbanowis.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_pnKtvG_ZM2zk8pQKzlZZyA_3zCnOj7Q";
 
@@ -21,10 +27,22 @@ const SUPABASE_ANON_KEY =
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (
+    !pathname.startsWith(ADMIN_PREFIX) &&
+    !pathname.startsWith(MEMBER_PREFIX) &&
+    !pathname.startsWith("/studio")
+  ) {
+    return NextResponse.next();
+  }
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  const pendingCookies: { name: string; value: string; options?: Record<string, unknown> }[] = [];
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   const supabase = createServerClient(
     SUPABASE_URL,
@@ -35,77 +53,115 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
-            pendingCookies.push({ name, value, options });
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({
+            request: {
+              headers: requestHeaders,
+            },
           });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
+          );
         },
       },
     }
   );
 
-  function buildResponse() {
-    const res = NextResponse.next({ request: { headers: requestHeaders } });
-    pendingCookies.forEach(({ name, value, options }) => {
-      res.cookies.set(name, value, options as Parameters<typeof res.cookies.set>[2]);
-    });
-    return res;
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // ── Protection des routes /ops-jci-htx/* ──────────────────────
-  if (pathname.startsWith("/ops-jci-htx") && !pathname.startsWith("/ops-jci-htx/login")) {
+  if (pathname.startsWith("/studio")) {
     if (!user) {
-      return NextResponse.redirect(new URL("/ops-jci-htx/login", request.url));
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
     }
-
-    const { data: adminUser } = await supabase
-      .from("admin_users")
-      .select("role, name, is_active")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!adminUser || !adminUser.is_active) {
-      return NextResponse.redirect(new URL("/ops-jci-htx/login?error=unauthorized", request.url));
-    }
-
-    requestHeaders.set("x-admin-role", adminUser.role);
-    requestHeaders.set("x-admin-name", encodeURIComponent(adminUser.name));
-  }
-
-  // ── Protection des routes /espace-membre/* ────────────────────
-  const publicMemberPaths = [
-    "/espace-membre/connexion",
-    "/espace-membre/invitation",
-  ];
-  const isPublicMemberPath = publicMemberPaths.some((p) => pathname.startsWith(p));
-
-  if (pathname.startsWith("/espace-membre") && !isPublicMemberPath) {
-    if (!user) {
-      return NextResponse.redirect(new URL("/espace-membre/connexion", request.url));
-    }
-  }
-
-  if (pathname === "/ops-jci-htx/login" && user) {
     const { data: adminUser } = await supabase
       .from("admin_users")
       .select("role, is_active")
       .eq("user_id", user.id)
       .single();
 
-    if (adminUser && adminUser.is_active) {
-      return NextResponse.redirect(new URL("/ops-jci-htx/dashboard", request.url));
+    if (!adminUser || !adminUser.is_active) {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
     }
+    return response;
   }
 
-  if (pathname === "/espace-membre/connexion" && user) {
-    return NextResponse.redirect(new URL("/espace-membre/tableau-de-bord", request.url));
+  // ─── ROUTES ADMIN ──────────────────────────────────────────
+  if (pathname.startsWith(ADMIN_PREFIX)) {
+    if (pathname === ADMIN_LOGIN) {
+      if (user) {
+        return NextResponse.redirect(new URL(`${ADMIN_PREFIX}/dashboard`, request.url));
+      }
+      return response;
+    }
+
+    if (!user) {
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
+    }
+
+    const { data: adminUser } = await supabase
+      .from("admin_users")
+      .select("name, role, is_active")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!adminUser || !adminUser.is_active) {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL(ADMIN_LOGIN, request.url));
+    }
+
+    requestHeaders.set("x-admin-role", adminUser.role);
+    requestHeaders.set("x-admin-name", encodeURIComponent(adminUser.name));
+    response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+    return response;
   }
 
-  return buildResponse();
+  // ─── ROUTES MEMBRE ─────────────────────────────────────────
+  if (pathname.startsWith(MEMBER_PREFIX)) {
+    if (pathname === MEMBER_LOGIN || pathname.startsWith(MEMBER_INVITE)) {
+      if (user && pathname === MEMBER_LOGIN) {
+        return NextResponse.redirect(new URL(`${MEMBER_PREFIX}/tableau-de-bord`, request.url));
+      }
+      return response;
+    }
+
+    if (!user) {
+      return NextResponse.redirect(new URL(MEMBER_LOGIN, request.url));
+    }
+
+    const { data: member } = await supabase
+      .from("members")
+      .select("id, first_name, last_name, status")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!member || member.status === "inactive") {
+      await supabase.auth.signOut();
+      return NextResponse.redirect(new URL(MEMBER_LOGIN, request.url));
+    }
+
+    requestHeaders.set("x-member-id", member.id);
+    requestHeaders.set("x-member-name", encodeURIComponent(`${member.first_name} ${member.last_name}`));
+    response = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+    return response;
+  }
+
+  return response;
 }
 
+export default proxy;
+
 export const config = {
-  matcher: ["/ops-jci-htx/:path*", "/espace-membre/:path*"],
+  matcher: ["/ops-jci-htx/:path*", "/espace-membre/:path*", "/studio/:path*"],
 };
