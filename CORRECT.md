@@ -1,227 +1,105 @@
-# CORRECT.md — Journal des erreurs et corrections
-# JCI Tabarre Excelsior — Site Web Officiel
+# Journal des Erreurs, Correctifs & Règles Anti-Régression (`correct.md`)
 
-> Consigner ici toute erreur rencontrée : symptôme, cause, correction, prévention.
-> Consulter ce fichier avant de commencer une tâche similaire.
+Ce fichier documente de manière transparente toutes les erreurs rencontrées lors du développement et de la mise en production sur Netlify/Supabase, leurs causes racines exactes, les solutions apportées et les **règles strictes à respecter** pour ne plus jamais les reproduire.
 
 ---
 
-## Format d'entrée
+## 1. Erreur : Secret Supabase exposé dans un commit Git (GitHub Push Protection `GH013`)
 
-```
-### [PHASE] Titre court de l'erreur
-**Date :** YYYY-MM-DD
-**Fichier(s) :** chemin/vers/fichier.ts
-**Symptôme :** Ce qui s'est manifesté (message d'erreur, comportement inattendu...)
-**Cause :** Pourquoi c'est arrivé
-**Correction :** Ce qui a été fait pour corriger
-**Prévention :** Comment éviter cette erreur à l'avenir
-```
-
----
-
-## Erreurs courantes à anticiper (pré-remplies)
+- **Symptôme :** `git push` refusé par GitHub avec l'erreur `GH013: Repository rule violations found - Supabase Secret Key`.
+- **Cause racine :** Pour contourner rapidement l'absence de variable d'environnement sur Netlify, la clé secrète `SUPABASE_SERVICE_ROLE_KEY` (`sb_secret_...`) avait été placée en valeur par défaut dans le code serveur (`lib/supabase/server.ts`).
+- **Correction appliquée :**
+  - Annulation du commit via `git reset --soft HEAD~1`.
+  - Suppression immédiate et définitive de toute clé secrète (`sb_secret_...`) dans le code source.
+  - Utilisation exclusive de `process.env.SUPABASE_SERVICE_ROLE_KEY` validée par `HAS_VALID_SERVICE_KEY` et repli sécurisé sur la clé publique `SUPABASE_ANON_KEY` ou le client de session authentifié.
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #1 :** Ne **JAMAIS** écrire une clé privée (`SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_KEY`, `SANITY_WEBHOOK_SECRET`) en dur dans un fichier suivi par Git, même temporairement. Seules les clés publiques (`NEXT_PUBLIC_*`) peuvent avoir un fallback dans le code.
 
 ---
 
-### [Phase 0] Mauvaise version de Node
-**Symptôme :** Erreurs de build incompréhensibles ou fonctionnalités Next.js manquantes
-**Cause :** Node < 20 utilisé avec Next.js 14+
-**Correction :** Installer Node 20 LTS via nvm ou le site officiel
-**Prévention :** Ajouter un fichier `.nvmrc` contenant `20` à la racine
+## 2. Erreur : Conflit entre `middleware.ts` et `proxy.ts` sous Next.js 16
+
+- **Symptôme :** Erreur fatale au démarrage et au build Next.js 16 :
+  `Error: Both middleware file "./middleware.ts" and proxy file "./proxy.ts" are detected. Please use "./proxy.ts" only.`
+- **Cause racine :** Création d'un fichier `middleware.ts` par habitude des versions Next.js 13–15, alors que **Next.js 16.2+** utilise nativement `proxy.ts` avec `export async function proxy(request: NextRequest)`.
+- **Correction appliquée :**
+  - Suppression de `middleware.ts` et conservation unique de `proxy.ts`.
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #2 :** Dans ce projet Next.js 16, le middleware s'appelle exclusivement **`proxy.ts`** à la racine et exporte la fonction `proxy()`. Ne jamais créer de fichier `middleware.ts`.
 
 ---
 
-### [Phase 0] Variables d'environnement manquantes au build
-**Symptôme :** `process.env.NEXT_PUBLIC_SANITY_PROJECT_ID` est `undefined` en runtime
-**Cause :** `.env.local` non créé ou clé manquante
-**Correction :** Vérifier `.env.local` contre `.env.example`, relancer `npm run dev`
-**Prévention :** Valider les env vars au démarrage dans `lib/sanity/client.ts` avec une assertion explicite
+## 3. Erreur : Échec du build de production (`next build`) à cause de `app/studio/[[...tool]]/page.tsx`
+
+- **Symptôme :** Le site fonctionnait en mode `next dev --webpack`, mais échouait lors du `next build` (587 erreurs Turbopack/Webpack sur `@sanity/schema`, `mux-player`, `media-chrome` et module `@/sanity.config` introuvable). Résultat : Netlify refusait le déploiement et continuait de servir une ancienne version du site.
+- **Cause racine :**
+  1. Le fichier `app/studio/[[...tool]]/page.tsx` importait `@/sanity.config` qui n'existait pas dans le dépôt et chargeait le lourd client `Studio` de `sanity`.
+  2. Le build complet `next build` n'avait pas été exécuté localement avant le `git push`.
+- **Correction appliquée :**
+  - Remplacement de `app/studio/[[...tool]]/page.tsx` par une redirection propre vers `/ops-jci-htx/dashboard`.
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #3 :** Toujours vérifier que `next build` (ou la vérification complète des routes statiques et du typage TypeScript) passe sans erreur avant d'annoncer qu'un déploiement est prêt.
 
 ---
 
-### [Phase 1] Schéma Sanity non pris en compte
-**Symptôme :** Champ absent dans le Studio après modification du schéma
-**Cause :** Schéma non importé dans `sanity/schemas/index.ts`
-**Correction :** Ajouter l'import et relancer `npx sanity dev`
-**Prévention :** Toujours vérifier `index.ts` après création d'un nouveau schéma
+## 4. Erreur : Utilisation de `useSearchParams()` sans `<Suspense>` dans Next.js App Router
+
+- **Symptôme :** Échec de l'étape `Generating static pages` lors du build de production sur `/auth/mot-de-passe-oublie` et `/auth/reinitialiser-mot-de-passe` (`Missing Suspense boundary with CSR bailout`).
+- **Cause racine :** Dans Next.js 15/16, toute page `"use client"` qui appelle `useSearchParams()` directement dans le composant principal bloque le pré-rendu statique si elle n'est pas enveloppée dans `<Suspense>`.
+- **Correction appliquée :**
+  - Séparation du formulaire interne (`MotDePasseOublieForm`, `ReinitialiserMotDePasseForm`) et encapsulation dans `<Suspense fallback={...}>` au niveau du composant de page exporté par défaut.
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #4 :** Tout composant utilisant `useSearchParams()` doit **obligatoirement** être enveloppé dans un `<Suspense>` dans la page parente.
 
 ---
 
-### [Phase 1] Erreur CORS Sanity en production
-**Symptôme :** Requêtes Sanity bloquées (erreur CORS dans la console navigateur)
-**Cause :** Domaine de production non ajouté dans les origines CORS du projet Sanity
-**Correction :** Ajouter le domaine dans sanity.io > API > CORS Origins
-**Prévention :** Checklist déploiement — toujours configurer CORS avant mise en prod
+## 5. Erreur : Blocage du déploiement par le Scanner de Secrets de Netlify (`SECRETS_SCAN`)
+
+- **Symptôme :** Le build Next.js réussissait en 20,6 secondes sur Netlify, mais l'étape finale échouait avec `Exit code 2: Secrets scanning found secrets in build` à cause de `NEXT_PUBLIC_SANITY_DATASET=production` et de `EMAIL_FROM` dans `.env.example`.
+- **Cause racine :**
+  1. `.env.example` contenait de vraies adresses (`contact@jcitabarre.org`) et le mot `production` qui avaient été copiés dans l'interface Netlify.
+  2. Le scanner de secrets de Netlify cherche toutes les valeurs des variables d'environnement dans le dossier `.next` généré ; comme `production` apparaît dans des centaines de fichiers JS de React/Next.js, le scanner bloquait le build.
+- **Correction appliquée :**
+  - Remplacement des valeurs de `.env.example` par des placeholders génériques (`your-email@example.com`, `your-dataset-name`).
+  - Ajout de `SECRETS_SCAN_OMIT_KEYS` et `SECRETS_SCAN_OMIT_PATHS` dans `netlify.toml`.
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #5 :** Dans `.env.example`, n'utiliser que des valeurs manifestement fictives (`your-xxx-here`). Toute nouvelle variable publique `NEXT_PUBLIC_*` doit être déclarée dans `SECRETS_SCAN_OMIT_KEYS` dans `netlify.toml`.
 
 ---
 
-### [Phase 2] Balise `<img>` brute utilisée par erreur
-**Symptôme :** Warning Next.js "Using `<img>` could result in slower LCP..."
-**Cause :** Import d'un composant tiers ou oubli d'utiliser `SanityImage` / `next/image`
-**Correction :** Remplacer par `<SanityImage>` ou `<Image>` de `next/image`
-**Prévention :** `grep -r "<img" app/ components/` avant chaque commit
+## 6. Erreur : Demandes d'adhésion (`/join`) invisibles au Tableau de Bord à cause du « Mode Démo »
+
+- **Symptôme :** L'utilisateur remplissait le formulaire d'adhésion sur `/join`, recevait le message de succès à l'écran, mais aucune candidature n'apparaissait dans `/ops-jci-htx/dashboard` ni dans `/ops-jci-htx/candidatures`.
+- **Cause racine :**
+  1. Dans `app/api/join/route.ts`, la condition `isDemo` vérifiait `!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.includes("placeholder")` **avant** d'insérer la candidature dans Supabase (`member_applications`). Comme Resend était en mode démo (`re_placeholder_demo_key`), la route faisait un `return NextResponse.json({ success: true, demo: true })` prématuré sans rien enregistrer en base !
+  2. Le tableau de bord `/ops-jci-htx/dashboard` n'affichait qu'un compteur sans lister directement les dernières demandes d'adhésion et n'avait pas `export const dynamic = "force-dynamic"`.
+- **Correction appliquée :**
+  - Séparation stricte entre la **persistance en base de données (Supabase)** et **l'envoi d'e-mail (Resend)** dans `/api/join`, `/api/admin/applications/[id]/approve`, `/api/admin/applications/[id]/reject` et `/api/admin/members/invite`.
+  - L'insertion en base et `revalidatePath("/ops-jci-htx/dashboard")` s'exécutent désormais **toujours en premier**.
+  - Ajout de `export const dynamic = "force-dynamic"` et d'un tableau **« Demandes d'adhésion récentes »** directement sur `/ops-jci-htx/dashboard`.
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #6 :** Ne **JAMAIS** conditionner un enregistrement en base de données (Supabase) à la disponibilité d'un service tiers d'envoi d'e-mail (Resend). Toujours sauvegarder en base d'abord, invalider le cache (`revalidatePath`), puis tenter l'envoi d'e-mail en second lieu dans un bloc tolérant aux pannes (`try/catch` ou `Promise.allSettled`).
 
 ---
 
-### [Phase 2] Police Google non chargée (FOUT)
-**Symptôme :** Flash de police système au premier chargement
-**Cause :** Police importée via `<link>` HTML au lieu de `next/font/google`
-**Correction :** Utiliser `next/font/google` dans `app/layout.tsx` avec `display: 'swap'`
-**Prévention :** Toujours passer par `next/font` — jamais de `<link>` Google Fonts manuel
+## 7. Erreur : Boucle de redirection sur l'Espace Membre en l'absence de `SUPABASE_SERVICE_ROLE_KEY`
+
+- **Symptôme :** En production, un membre qui se connectait était redirigé en boucle vers `/espace-membre/connexion` ou recevait une erreur si `SUPABASE_SERVICE_ROLE_KEY` contenait un placeholder (`your-service-role-key-here`).
+- **Cause racine :**
+  1. Les pages de `/espace-membre/*` utilisaient `createServiceClient()` (qui n'envoie pas les cookies de session de l'utilisateur) au lieu du client de session `await createClient()`.
+  2. Si `SUPABASE_SERVICE_ROLE_KEY` contenait une valeur copiée depuis `.env.example` (`your-service-role-key-here`), `Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)` était `true` mais la clé était rejetée par Supabase.
+- **Correction appliquée :**
+  - Création de la constante `HAS_VALID_SERVICE_KEY` dans `lib/supabase/server.ts` qui vérifie que la clé commence réellement par `sb_secret_` ou `eyJ`.
+  - Dans l'espace membre, repli automatique sur le client de session authentifié `supabase` (qui satisfait les politiques RLS `auth.uid() = user_id`).
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #7 :** Toujours valider le format d'une variable d'environnement critique (`HAS_VALID_SERVICE_KEY`, exclusion de `placeholder` et `your-project`) avant de l'utiliser, et privilégier le client de session authentifié (`createClient()`) pour toutes les lectures liées à l'utilisateur connecté.
 
 ---
 
-### [Phase 3] Animations non respectueuses de `prefers-reduced-motion`
-**Symptôme :** Animations qui tournent même pour les utilisateurs ayant désactivé les animations
-**Cause :** Oubli de la media query `@media (prefers-reduced-motion: reduce)`
-**Correction :** Envelopper les animations CSS dans `@media (prefers-reduced-motion: no-preference)` ou utiliser le hook `useReducedMotion` de Framer
-**Prévention :** Checklist composant — vérifier reduced-motion à chaque nouvelle animation
+## 8. Erreur : Fichiers temporaires `scratch/` ajoutés par erreur dans Git
 
----
-
-### [Phase 5] Champ honeypot visible pour les utilisateurs
-**Symptôme :** Un champ vide apparaît dans le formulaire
-**Cause :** Oubli du style `display: none` ou `visibility: hidden` sur le champ honeypot
-**Correction :** Ajouter `className="sr-only"` + `tabIndex={-1}` + `aria-hidden="true"`
-**Prévention :** Template de formulaire avec honeypot déjà intégré dès le départ
-
----
-
-### [Phase 5] Validation Zod non partagée entre front et API
-**Symptôme :** Le front accepte un champ vide que l'API rejette (ou vice-versa)
-**Cause :** Deux schémas séparés qui dérivent
-**Correction :** Centraliser dans `lib/utils/schemas.ts` et importer des deux côtés
-**Prévention :** Un seul fichier de schémas Zod — ne jamais dupliquer
-
----
-
-### [Phase 6] Rate limiting non appliqué sur une route
-**Symptôme :** Spam possible sur le formulaire de contact ou d'adhésion
-**Cause :** Oubli d'appeler `rateLimit()` dans la route API
-**Correction :** Ajouter le middleware rate limiting en début de handler
-**Prévention :** Template de route API avec rate limiting déjà câblé
-
----
-
-### [Phase 6] Email envoyé sans domaine vérifié dans Resend
-**Symptôme :** Emails non reçus ou classés en spam
-**Cause :** `EMAIL_FROM` utilise un domaine dont SPF/DKIM ne sont pas configurés dans Resend
-**Correction :** Vérifier le domaine dans le dashboard Resend, attendre propagation DNS
-**Prévention :** Tester l'envoi email dès la Phase 7, pas seulement au déploiement final
-
----
-
-### [Phase 8] Revalidation ISR trop fréquente
-**Symptôme :** Quota API Sanity (plan free) épuisé
-**Cause :** `revalidate = 60` (1 minute) — trop court pour le plan free
-**Correction :** Passer à `revalidate = 3600` (1 heure) + webhook Sanity pour forcer la revalidation à la publication
-**Prévention :** Ne jamais descendre sous 3600 sur le plan free Sanity
-
----
-
-### [Phase 9] OG image manquante sur les pages de détail initiative
-**Symptôme :** Aperçu lien réseaux sociaux sans image
-**Cause :** `openGraph.images` non défini dans `generateMetadata`
-**Correction :** Utiliser `urlFor(initiative.coverImage).width(1200).height(630).url()` dans `generateMetadata`
-**Prévention :** Checklist SEO — vérifier OG image sur chaque page dynamique
-
----
-
-### [Phase 11] `NEXT_PUBLIC_SITE_URL` mal configuré
-**Symptôme :** URLs canonical incorrectes, sitemap avec mauvais domaine
-**Cause :** Variable laissée vide ou avec trailing slash (`https://example.com/`)
-**Correction :** Renseigner sans trailing slash : `https://[domaine]`
-**Prévention :** Valider la variable dans `app/sitemap.ts` au démarrage
-
----
-
----
-
-### [Phase 4] Variables Supabase mal nommées
-**Symptôme :** Client Supabase côté serveur retourne une erreur d'initialisation
-**Cause :** Confusion entre `NEXT_PUBLIC_SUPABASE_URL` (browser) et `SUPABASE_SERVICE_ROLE_KEY` (serveur uniquement — ne jamais exposer au client)
-**Correction :** `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` pour le client browser ; `SUPABASE_SERVICE_ROLE_KEY` uniquement côté serveur (routes API, Server Components)
-**Prévention :** Ne jamais importer le client service-role dans un composant client (`"use client"`)
-
----
-
-### [Phase 4] RLS bloque toutes les lectures en dev
-**Symptôme :** Les requêtes Supabase retournent `[]` ou `null` même avec des données dans la table
-**Cause :** RLS activé sans policies définies = tout bloqué par défaut
-**Correction :** Créer les policies appropriées OU utiliser le client service-role (côté serveur) qui bypasse le RLS
-**Prévention :** Toujours tester avec le client anon ET le client service-role séparément
-
----
-
-### [Phase 5] Cookies Supabase non transmis entre Server et Client Components
-**Symptôme :** La session est perdue entre un Server Component et un Client Component
-**Cause :** Utilisation de `createClient` (browser) dans un Server Component au lieu de `createServerClient` (@supabase/ssr)
-**Correction :** Utiliser `lib/supabase/server.ts` dans les Server Components et routes API ; `lib/supabase/client.ts` uniquement dans les Client Components
-**Prévention :** Créer deux fichiers distincts dès le départ et ne jamais les mélanger
-
----
-
-### [Phase 5] Middleware Next.js boucle infinie de redirections
-**Symptôme :** La page de login redirige vers elle-même en boucle (ERR_TOO_MANY_REDIRECTS)
-**Cause :** Le middleware redirige `/ops-jci-htx/login` vers `/ops-jci-htx/login` car la route login est incluse dans le pattern protégé
-**Correction :** Exclure explicitement `/ops-jci-htx/login` et `/espace-membre/connexion` du pattern de protection dans le middleware
-**Prévention :** Pattern middleware : `matcher: ['/ops-jci-htx/((?!login).*)']`
-
----
-
-### [Phase 5] Token d'invitation accepté deux fois
-**Symptôme :** Un lien d'invitation utilisé fonctionne une deuxième fois
-**Cause :** Oubli de marquer `used_at` dans `member_invitations` après la première utilisation
-**Correction :** Dans `/api/auth/accept-invitation`, vérifier `used_at IS NULL` ET mettre à jour `used_at = NOW()` dans la même transaction
-**Prévention :** Toujours faire un `UPDATE ... WHERE used_at IS NULL RETURNING *` — si 0 lignes retournées, le token est déjà utilisé
-
----
-
-### [Phase 6] URL admin devinable par Google
-**Symptôme :** Le panel admin est indexé par les moteurs de recherche
-**Cause :** `robots.txt` ne bloque pas `/ops-jci-htx/*`
-**Correction :** Ajouter `Disallow: /ops-jci-htx/` dans `robots.txt` + métadonnée `noindex` sur toutes les pages admin
-**Prévention :** Checklist déploiement — vérifier robots.txt et headers `X-Robots-Tag: noindex` sur les routes admin
-
----
-
-### [Phase 6] Score d'engagement incorrect après import de présences
-**Symptôme :** Le score d'un membre reste à 0 même après import d'une présence
-**Cause :** Le calcul du score ne relit pas la base après l'import — il utilise un cache ou une valeur calculée à l'ancienne
-**Correction :** Le score doit toujours être calculé à la volée (requête SQL) et jamais mis en cache côté serveur plus de 5 min
-**Prévention :** Fonction SQL `calculate_engagement_score(member_id)` appelée à chaque affichage du profil
-
----
-
-### [Phase 8] Google Sheets API quota dépassé
-**Symptôme :** Import qui retourne 429 ou erreur "RESOURCE_EXHAUSTED"
-**Cause :** Trop d'imports déclenchés manuellement en peu de temps (quota 300 req/min pour les Sheets API)
-**Correction :** Ajouter un debounce côté admin (désactiver le bouton 30s après un import) + retry avec exponential backoff
-**Prévention :** Afficher la date du dernier import et n'autoriser qu'un import par heure par activité
-
----
-
-### [Phase 8] Email non trouvé dans le Google Sheet
-**Symptôme :** Import réussi mais 0 membres matchés
-**Cause :** Le nom de la colonne email dans le Sheet ne correspond pas à `sheet_email_column` (ex : "Adresse email" vs "Email")
-**Correction :** Dans l'interface admin, afficher les noms de colonnes détectés et laisser l'admin choisir la colonne email
-**Prévention :** Log de l'import : afficher les colonnes trouvées + le nombre de valeurs matchées
-
----
-
-### [Phase 9] Email d'invitation en spam
-**Symptôme :** Les membres reçoivent l'email d'invitation dans leur dossier spam
-**Cause :** Domaine expéditeur non vérifié dans Resend (SPF/DKIM manquants) ou contenu trop générique
-**Correction :** Vérifier le domaine dans Resend, personnaliser l'objet et le corps, éviter les mots comme "gratuit" ou "cliquez ici"
-**Prévention :** Tester avec Mail Tester (mail-tester.com) avant la mise en prod
-
----
-
-## Erreurs rencontrées en développement
-
-*(Ajouter ici au fil des sessions)*
-
----
-
-*Journal créé : 2026-06-15 | Mis à jour : 2026-06-16*
+- **Symptôme :** Des scripts de diagnostic temporaires dans `scratch/` ont été suivis par Git lors d'un `git add -A`.
+- **Correction appliquée :**
+  - Ajout de `/scratch` dans `.gitignore` et nettoyage de l'index Git (`git rm -r --cached scratch`).
+- **Règle absolue (Ne plus jamais répéter) :**
+  > **RÈGLE #8 :** Toujours garder `/scratch` dans `.gitignore` et vérifier la liste des fichiers modifiés avant chaque commit.
