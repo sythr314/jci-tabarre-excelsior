@@ -70,7 +70,11 @@ export async function POST(req: NextRequest) {
 
   revalidatePath("/ops-jci-htx/membres");
 
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    req.nextUrl.origin ||
+    "https://jci-excelsior.netlify.app"
+  ).replace(/\/$/, "");
   const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
 
   const canSendEmail =
