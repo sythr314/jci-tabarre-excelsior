@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getResend } from "@/lib/email/resend";
 import { joinSchema, INTERESTS_OPTIONS, HOW_HEARD_OPTIONS, EDUCATION_OPTIONS } from "@/lib/utils/schemas";
 import { applyRateLimit } from "@/lib/utils/rateLimit";
 import { createServiceClient } from "@/lib/supabase/server";
-
+import { escapeHtml } from "@/lib/utils/security";
 
 const INTEREST_LABELS = Object.fromEntries(INTERESTS_OPTIONS.map((o) => [o.value, o.label]));
 const HOW_HEARD_LABELS = Object.fromEntries(HOW_HEARD_OPTIONS.map((o) => [o.value, o.label]));
@@ -17,8 +18,6 @@ function computeAge(birthDate: string): number {
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return age;
 }
-
-import { escapeHtml } from "@/lib/utils/security";
 
 export async function POST(req: NextRequest) {
   const limited = await applyRateLimit(req);
@@ -43,19 +42,7 @@ export async function POST(req: NextRequest) {
 
   if (_honeypot) return NextResponse.json({ success: true });
 
-  // Mode Démonstration : si les API Supabase ou Resend ne sont pas encore configurées
-  const isDemo =
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") ||
-    !process.env.RESEND_API_KEY ||
-    process.env.RESEND_API_KEY.includes("placeholder");
-
-  if (isDemo) {
-    console.log("[DEMO MODE] Candidature d'adhésion simulée avec succès pour :", email);
-    return NextResponse.json({ success: true, demo: true });
-  }
-
-  // Persister la candidature en base (service role bypasse RLS)
+  // Toujours persister la candidature en base Supabase (même si Resend est en mode démo)
   const supabase = createServiceClient();
   const { error: dbError } = await supabase.from("member_applications").insert({
     first_name:      firstName,
@@ -76,12 +63,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Échec de l'enregistrement de la candidature" }, { status: 500 });
   }
 
+  // Rafraîchir immédiatement le tableau de bord et la liste des candidatures
+  revalidatePath("/ops-jci-htx/dashboard");
+  revalidatePath("/ops-jci-htx/candidatures");
+
+  // Envoi d'emails uniquement si Resend est configuré avec une vraie clé API
+  const canSendEmail =
+    Boolean(process.env.RESEND_API_KEY) &&
+    !process.env.RESEND_API_KEY!.includes("placeholder") &&
+    !process.env.RESEND_API_KEY!.includes("your_api_key") &&
+    Boolean(process.env.EMAIL_FROM) &&
+    !process.env.EMAIL_FROM!.includes("example.com");
+
+  if (!canSendEmail) {
+    console.log("[EMAIL DEMO] Candidature enregistrée en base avec succès pour :", email);
+    return NextResponse.json({ success: true });
+  }
+
   const age = computeAge(birthDate);
   const interestLabels = interests.map((i) => INTEREST_LABELS[i] ?? i).join(", ");
   const howHeardLabel = HOW_HEARD_LABELS[howHeard] ?? howHeard;
   const educationLabel = educationLevel ? (EDUCATION_LABELS[educationLevel] ?? educationLevel) : null;
 
-  // Valeurs échappées pour insertion sécurisée dans le template HTML
   const safeFirst = escapeHtml(firstName);
   const safeLast = escapeHtml(lastName);
   const safeEmail = escapeHtml(email);
@@ -97,7 +100,7 @@ export async function POST(req: NextRequest) {
   await Promise.allSettled([
     getResend().emails.send({
       from: process.env.EMAIL_FROM!,
-      to: process.env.EMAIL_TO!,
+      to: process.env.EMAIL_TO || process.env.EMAIL_FROM!,
       replyTo: email,
       subject: `[JCI] Nouvelle candidature — ${firstName} ${lastName}`,
       html: `

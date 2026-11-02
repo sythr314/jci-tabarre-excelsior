@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
 import { isValidUUID, escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
 import { getResend } from "@/lib/email/resend";
-
 
 export async function POST(
   req: NextRequest,
@@ -13,7 +13,6 @@ export async function POST(
     return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   }
 
-  // Auth check avec is_active
   const auth = await requireActiveAdmin(["president", "secretaire"]);
   if (auth.error || !auth.admin) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
@@ -80,35 +79,11 @@ export async function POST(
     .single();
 
   if (inviteError) {
-    // Rollback membre
     await service.from("members").delete().eq("id", member.id);
     return NextResponse.json({ error: inviteError.message }, { status: 500 });
   }
 
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
-  const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
-
-  // Envoyer l'email d'invitation
-  await getResend().emails.send({
-    from: process.env.EMAIL_FROM!,
-    to: application.email,
-    subject: "Votre candidature JCI a été acceptée — Activez votre compte",
-    html: `
-      <h2 style="color:#1e3a8a;">Félicitations, ${escapeHtml(application.first_name)} !</h2>
-      <p>Votre candidature pour rejoindre <strong>JCI Tabarre Excelsior</strong> a été examinée et <strong>acceptée</strong>.</p>
-      <p>Cliquez sur le bouton ci-dessous pour créer votre mot de passe et accéder à votre espace membre (lien valable 48h) :</p>
-      <p style="margin:24px 0;">
-        <a href="${inviteUrl}" style="background:#1e3a8a;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">
-          Activer mon compte
-        </a>
-      </p>
-      <p style="color:#9ca3af;font-size:12px;">Si vous ne reconnaissez pas cet email, vous pouvez l'ignorer.</p>
-      <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />
-      <p style="color:#6b7280;font-size:12px;">JCI Tabarre Excelsior — Tabarre, Haïti</p>
-    `,
-  });
-
-  // Marquer la candidature comme approuvée
+  // Marquer la candidature comme approuvée immédiatement
   await service.from("member_applications").update({
     status:      "approved",
     reviewed_by: admin.id,
@@ -126,5 +101,40 @@ export async function POST(
     ip_address:  getTrustedClientIp(req),
   });
 
-  return NextResponse.json({ success: true, memberId: member.id });
+  revalidatePath("/ops-jci-htx/dashboard");
+  revalidatePath("/ops-jci-htx/candidatures");
+  revalidatePath("/ops-jci-htx/membres");
+
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
+  const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
+
+  const canSendEmail =
+    Boolean(process.env.RESEND_API_KEY) &&
+    !process.env.RESEND_API_KEY!.includes("placeholder") &&
+    !process.env.RESEND_API_KEY!.includes("your_api_key") &&
+    Boolean(process.env.EMAIL_FROM) &&
+    !process.env.EMAIL_FROM!.includes("example.com");
+
+  if (canSendEmail) {
+    await getResend().emails.send({
+      from: process.env.EMAIL_FROM!,
+      to: application.email,
+      subject: "Votre candidature JCI a été acceptée — Activez votre compte",
+      html: `
+        <h2 style="color:#1e3a8a;">Félicitations, ${escapeHtml(application.first_name)} !</h2>
+        <p>Votre candidature pour rejoindre <strong>JCI Tabarre Excelsior</strong> a été examinée et <strong>acceptée</strong>.</p>
+        <p>Cliquez sur le bouton ci-dessous pour créer votre mot de passe et accéder à votre espace membre (lien valable 48h) :</p>
+        <p style="margin:24px 0;">
+          <a href="${inviteUrl}" style="background:#1e3a8a;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">
+            Activer mon compte
+          </a>
+        </p>
+        <p style="color:#9ca3af;font-size:12px;">Si vous ne reconnaissez pas cet email, vous pouvez l'ignorer.</p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;" />
+        <p style="color:#6b7280;font-size:12px;">JCI Tabarre Excelsior — Tabarre, Haïti</p>
+      `,
+    }).catch((e) => console.error("Approve email error:", e));
+  }
+
+  return NextResponse.json({ success: true, memberId: member.id, inviteUrl });
 }

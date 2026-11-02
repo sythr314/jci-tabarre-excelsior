@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient, HAS_VALID_SERVICE_KEY } from "@/lib/supabase/server";
 import { MemberTaskList, type MemberTask } from "./MemberTaskList";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export default async function MemberTasksPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/espace-membre/connexion");
 
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : supabase;
+  const service = HAS_VALID_SERVICE_KEY ? createServiceClient() : supabase;
   const { data: member } = await service
     .from("members")
     .select("id")

@@ -1,9 +1,9 @@
 import type { EngagementScore } from "./types";
 import { getEngagementLevel } from "./types";
-import { createClient, createServiceClient } from "./server";
+import { createClient, createServiceClient, HAS_VALID_SERVICE_KEY } from "./server";
 
 export async function calculateEngagementScore(memberId: string): Promise<EngagementScore> {
-  const supabase = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : await createClient();
+  const supabase = HAS_VALID_SERVICE_KEY ? createServiceClient() : await createClient();
   const currentYear = new Date().getFullYear();
 
   const [activitiesResult, attendancesResult, cotisationResult, roleResult] = await Promise.allSettled([

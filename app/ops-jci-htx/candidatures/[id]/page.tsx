@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { ReviewButtons } from "./ReviewButtons";
 import { INTERESTS_OPTIONS, HOW_HEARD_OPTIONS, EDUCATION_OPTIONS } from "@/lib/utils/schemas";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Candidature — Admin JCI" };
 
 const INTEREST_LABELS = Object.fromEntries(INTERESTS_OPTIONS.map((o) => [o.value, o.label]));

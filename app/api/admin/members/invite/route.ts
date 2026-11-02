@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireActiveAdmin, createServiceClient } from "@/lib/supabase/server";
 import { escapeHtml, getTrustedClientIp } from "@/lib/utils/security";
 import { getResend } from "@/lib/email/resend";
 import { z } from "zod";
-
 
 const schema = z.object({
   email: z.string().email(),
@@ -24,7 +24,6 @@ export async function POST(req: NextRequest) {
   const { email, firstName, lastName } = body.data;
   const service = createServiceClient();
 
-  // Vérifier si le membre existe déjà
   const { data: existing } = await service
     .from("members")
     .select("id")
@@ -35,7 +34,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cette adresse email est déjà associée à un membre" }, { status: 409 });
   }
 
-  // Créer le membre en statut pending
   const { data: member, error: memberError } = await service.from("members").insert({
     email: email.toLowerCase(),
     first_name: firstName,
@@ -49,7 +47,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Échec de la création du membre" }, { status: 500 });
   }
 
-  // Créer l'invitation (token généré par Supabase DEFAULT)
   const { data: invitation, error: inviteError } = await service
     .from("member_invitations")
     .insert({ email: email.toLowerCase(), invited_by: admin.id, member_id: member.id })
@@ -62,23 +59,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Échec de génération de l'invitation" }, { status: 500 });
   }
 
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
-  const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
-
-  // Envoyer l'email
-  await getResend().emails.send({
-    from: process.env.EMAIL_FROM!,
-    to: email,
-    subject: `Invitation à rejoindre JCI Tabarre Excelsior`,
-    html: `
-      <h2>Bonjour ${escapeHtml(firstName)},</h2>
-      <p><strong>${escapeHtml(admin.name)}</strong> vous invite à rejoindre l'espace membre de <strong>JCI Tabarre Excelsior</strong>.</p>
-      <p>Cliquez sur le lien ci-dessous pour créer votre compte (valable 48h) :</p>
-      <p><a href="${inviteUrl}" style="background:#45C4E0;color:#1B2454;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Activer mon compte</a></p>
-      <p style="color:#999;font-size:12px">Si vous ne reconnaissez pas cet email, vous pouvez l'ignorer.</p>
-    `,
-  });
-
   await service.from("audit_logs").insert({
     admin_id: admin.id,
     action: "member.invite",
@@ -88,5 +68,32 @@ export async function POST(req: NextRequest) {
     ip_address: getTrustedClientIp(req),
   });
 
-  return NextResponse.json({ success: true, memberId: member.id });
+  revalidatePath("/ops-jci-htx/membres");
+
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://jci-excelsior.netlify.app").replace(/\/$/, "");
+  const inviteUrl = `${baseUrl}/espace-membre/invitation/${invitation.token}`;
+
+  const canSendEmail =
+    Boolean(process.env.RESEND_API_KEY) &&
+    !process.env.RESEND_API_KEY!.includes("placeholder") &&
+    !process.env.RESEND_API_KEY!.includes("your_api_key") &&
+    Boolean(process.env.EMAIL_FROM) &&
+    !process.env.EMAIL_FROM!.includes("example.com");
+
+  if (canSendEmail) {
+    await getResend().emails.send({
+      from: process.env.EMAIL_FROM!,
+      to: email,
+      subject: `Invitation à rejoindre JCI Tabarre Excelsior`,
+      html: `
+        <h2>Bonjour ${escapeHtml(firstName)},</h2>
+        <p><strong>${escapeHtml(admin.name)}</strong> vous invite à rejoindre l'espace membre de <strong>JCI Tabarre Excelsior</strong>.</p>
+        <p>Cliquez sur le lien ci-dessous pour créer votre compte (valable 48h) :</p>
+        <p><a href="${inviteUrl}" style="background:#45C4E0;color:#1B2454;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Activer mon compte</a></p>
+        <p style="color:#999;font-size:12px">Si vous ne reconnaissez pas cet email, vous pouvez l'ignorer.</p>
+      `,
+    }).catch((e) => console.error("Invite email error:", e));
+  }
+
+  return NextResponse.json({ success: true, memberId: member.id, inviteUrl });
 }

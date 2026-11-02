@@ -2,12 +2,32 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { AdminRole } from "./types";
 
+const DEFAULT_SUPABASE_URL = "https://edufaoftopmprbanowis.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_pnKtvG_ZM2zk8pQKzlZZyA_3zCnOj7Q";
+
 const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://edufaoftopmprbanowis.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder") &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("your-project")
+    ? process.env.NEXT_PUBLIC_SUPABASE_URL
+    : DEFAULT_SUPABASE_URL;
+
 const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_pnKtvG_ZM2zk8pQKzlZZyA_3zCnOj7Q";
-const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("placeholder") &&
+  !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.includes("your-anon-key")
+    ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    : DEFAULT_SUPABASE_ANON_KEY;
+
+export const HAS_VALID_SERVICE_KEY = Boolean(
+  process.env.SUPABASE_SERVICE_ROLE_KEY &&
+  (process.env.SUPABASE_SERVICE_ROLE_KEY.startsWith("sb_secret_") ||
+   process.env.SUPABASE_SERVICE_ROLE_KEY.startsWith("eyJ"))
+);
+
+const SUPABASE_SERVICE_KEY = HAS_VALID_SERVICE_KEY
+  ? process.env.SUPABASE_SERVICE_ROLE_KEY!
+  : SUPABASE_ANON_KEY;
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -59,8 +79,7 @@ export async function requireActiveAdmin(allowedRoles?: AdminRole[]) {
     return { user: null, admin: null, error: "Non autorisé", status: 401 as const };
   }
 
-  // Utiliser le client de session (compatible RLS admin_self_read) ou service role si configuré
-  const db = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : supabase;
+  const db = HAS_VALID_SERVICE_KEY ? createServiceClient() : supabase;
   const { data: admin } = await db
     .from("admin_users")
     .select("id, role, name, is_active")

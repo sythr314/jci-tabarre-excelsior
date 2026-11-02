@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Candidatures — Admin JCI" };
 
 function StatusBadge({ status }: { status: string }) {

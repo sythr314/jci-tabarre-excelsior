@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient, HAS_VALID_SERVICE_KEY } from "@/lib/supabase/server";
 import { calculateEngagementScore } from "@/lib/supabase/engagement";
 import { ENGAGEMENT_LEVELS } from "@/lib/supabase/types";
 import { safeUrl } from "@/lib/utils/security";
@@ -13,7 +13,7 @@ export default async function MemberDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/espace-membre/connexion");
 
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY ? createServiceClient() : supabase;
+  const service = HAS_VALID_SERVICE_KEY ? createServiceClient() : supabase;
   const { data: member } = await service.from("members").select("*").eq("user_id", user.id).single();
   if (!member) redirect("/espace-membre/connexion");
 
