@@ -16,15 +16,17 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: `${BASE}/dashboard`,    label: "Tableau de bord", icon: "📊", roles: ["president","secretaire","charge_formation","charge_communication"] },
-  { href: `${BASE}/candidatures`, label: "Candidatures",    icon: "📋", roles: ["president","secretaire"] },
-  { href: `${BASE}/membres`,      label: "Membres",         icon: "👥", roles: ["president","secretaire"] },
-  { href: `${BASE}/activites`,    label: "Activités",       icon: "📅", roles: ["president","charge_formation"] },
-  { href: `${BASE}/taches`,       label: "Tâches",          icon: "✅", roles: ["president","secretaire","charge_formation","charge_communication"] },
-  { href: `${BASE}/formations`,   label: "Formations",      icon: "🎓", roles: ["president","charge_formation"] },
-  { href: `${BASE}/contenu`,      label: "Contenu",         icon: "📝", roles: ["president","charge_communication"] },
-  { href: `${BASE}/rapports`,     label: "Rapports",        icon: "📈", roles: ["president","secretaire","charge_formation"] },
-  { href: `${BASE}/audit`,        label: "Audit & Traçabilité", icon: "🔍", roles: ["president","secretaire"] },
+  { href: `${BASE}/dashboard`,     label: "Tableau de bord",      icon: "📊", roles: ["president","secretaire","charge_formation","charge_communication"] },
+  { href: `${BASE}/organisations`, label: "OLM & 100% Efficacité", icon: "🏛️", roles: ["president","secretaire","charge_formation","charge_communication"] },
+  { href: `${BASE}/candidatures`,  label: "Candidatures",         icon: "📋", roles: ["president","secretaire"] },
+  { href: `${BASE}/membres`,       label: "Membres",              icon: "👥", roles: ["president","secretaire"] },
+  { href: `${BASE}/activites`,     label: "Activités",            icon: "📅", roles: ["president","charge_formation"] },
+  { href: `${BASE}/taches`,        label: "Tâches",               icon: "✅", roles: ["president","secretaire","charge_formation","charge_communication"] },
+  { href: `${BASE}/formations`,    label: "Formations",           icon: "🎓", roles: ["president","charge_formation"] },
+  { href: `${BASE}/toyp`,          label: "Programme TOYP",       icon: "🏆", roles: ["president","secretaire","charge_communication"] },
+  { href: `${BASE}/contenu`,       label: "Contenu",              icon: "📝", roles: ["president","charge_communication"] },
+  { href: `${BASE}/rapports`,      label: "Rapports",             icon: "📈", roles: ["president","secretaire","charge_formation"] },
+  { href: `${BASE}/audit`,         label: "Audit & Traçabilité",  icon: "🔍", roles: ["president","secretaire"] },
 ];
 
 const roleLabels: Record<AdminRole, string> = {
@@ -60,7 +62,7 @@ export function Sidebar({ role, adminName }: SidebarProps) {
           <span className="font-heading font-bold text-xl text-white">JCI</span>
           <span className="font-heading text-cyan text-xs leading-tight">Tabarre<br />Excelsior</span>
         </div>
-        <p className="text-white/40 text-xs mt-1">Administration</p>
+        <p className="text-white/40 text-xs mt-1">Gouvernance & Réseau National</p>
       </div>
 
       {/* Nav */}

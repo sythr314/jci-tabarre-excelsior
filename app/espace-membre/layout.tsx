@@ -13,6 +13,7 @@ const navLinks = [
   { href: "/espace-membre/taches",           label: "Mes tâches" },
   { href: "/espace-membre/activites",        label: "Mes activités" },
   { href: "/espace-membre/formations",       label: "Mes formations" },
+  { href: "/espace-membre/ressources",       label: "Ressources & Formateurs" },
   { href: "/espace-membre/profil",           label: "Mon profil" },
 ];
 

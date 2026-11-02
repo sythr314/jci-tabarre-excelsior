@@ -3,7 +3,10 @@ import Link from "next/link";
 const navLinks = [
   { href: "/", label: "Accueil" },
   { href: "/about", label: "À propos" },
+  { href: "/organisations", label: "Organisations Locales (OLM)" },
+  { href: "/programmes", label: "Programmes Nationaux & JCI TOYP" },
   { href: "/initiatives", label: "Nos initiatives" },
+  { href: "/verifier", label: "Vérifier un certificat JCI" },
   { href: "/contact", label: "Contact" },
   { href: "/join", label: "Nous rejoindre" },
   { href: "/espace-membre/connexion", label: "Espace Membre (Connexion)" },
@@ -27,14 +30,14 @@ export function Footer() {
             </div>
             <p className="text-sm leading-relaxed">
               Locale membre de JCI Haïti — Junior Chamber International.
-              Des jeunes leaders engagés pour le changement.
+              Des jeunes leaders engagés pour le changement positif à l&apos;échelle locale et nationale.
             </p>
           </div>
 
           {/* Navigation */}
           <div>
             <h3 className="font-heading font-semibold text-white text-sm uppercase tracking-wider mb-4">
-              Navigation
+              Navigation & Portail National
             </h3>
             <ul className="space-y-2">
               {navLinks.map(({ href, label }) => (
@@ -53,10 +56,10 @@ export function Footer() {
           {/* Contact */}
           <div>
             <h3 className="font-heading font-semibold text-white text-sm uppercase tracking-wider mb-4">
-              Contact
+              Contact & Réseau
             </h3>
             <ul className="space-y-2 text-sm">
-              <li>Tabarre, Haïti</li>
+              <li>Tabarre, Haïti (Région Ouest & Aire Métropolitaine)</li>
               <li>
                 <a
                   href="https://jcihaiti.org"
@@ -64,7 +67,7 @@ export function Footer() {
                   rel="noopener noreferrer"
                   className="hover:text-cyan transition-colors focus-visible:outline-none focus-visible:text-cyan"
                 >
-                  jcihaiti.org
+                  jcihaiti.org — Organisation Nationale
                 </a>
               </li>
             </ul>
@@ -72,7 +75,7 @@ export function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
-          <p>© {year} JCI Tabarre Excelsior. Tous droits réservés.</p>
+          <p>© {year} JCI Tabarre Excelsior & Réseau JCI Haïti. Tous droits réservés.</p>
           <p>Membre de JCI Haïti — Junior Chamber International</p>
         </div>
       </div>

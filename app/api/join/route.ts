@@ -36,11 +36,16 @@ export async function POST(req: NextRequest) {
   }
 
   const {
-    firstName, lastName, email, phone, birthDate, commune,
+    firstName, lastName, email, phone, birthDate, commune, localOrg,
     profession, educationLevel, interests, howHeard, motivation, _honeypot,
   } = result.data;
 
   if (_honeypot) return NextResponse.json({ success: true });
+
+  const formattedCommune =
+    localOrg && localOrg !== "tabarre-excelsior"
+      ? `${commune} (OLM: ${localOrg})`
+      : commune;
 
   // Toujours persister la candidature en base Supabase (même si Resend est en mode démo)
   const supabase = createServiceClient();
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
     email:           email.toLowerCase(),
     phone:           phone || null,
     birth_date:      birthDate,
-    commune,
+    commune:         formattedCommune,
     profession:      profession || null,
     education_level: educationLevel || null,
     interests,

@@ -12,7 +12,8 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/utils/cn";
-import { useState } from "react";
+import { DEFAULT_LOCAL_ORGANIZATIONS } from "@/lib/data/national";
+import { useState, useEffect } from "react";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -39,13 +40,25 @@ export function JoinForm() {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<JoinFormData>({
     resolver: zodResolver(joinSchema),
     defaultValues: {
+      localOrg: "tabarre-excelsior",
       interests: [],
     },
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const olm = params.get("olm");
+      if (olm && DEFAULT_LOCAL_ORGANIZATIONS.some((o) => o.slug === olm)) {
+        setValue("localOrg", olm);
+      }
+    }
+  }, [setValue]);
 
   async function onSubmit(data: JoinFormData) {
     setStatus("loading");
@@ -157,6 +170,24 @@ export function JoinForm() {
           />
           {errors.commune && <p role="alert" className="mt-1 text-xs text-error">{errors.commune.message}</p>}
         </div>
+      </div>
+
+      {/* ── Organisation Locale souhaitée (Multi-OLM) ── */}
+      <div>
+        <label htmlFor="join-localOrg" className="block text-sm font-medium text-navy mb-1">
+          Organisation Locale Membre (OLM) d&apos;affectation souhaitée
+        </label>
+        <select
+          id="join-localOrg"
+          className={cn(inputClass, "cursor-pointer")}
+          {...register("localOrg")}
+        >
+          {DEFAULT_LOCAL_ORGANIZATIONS.map((org) => (
+            <option key={org.slug} value={org.slug}>
+              {org.name} — {org.city} ({org.regionLabel})
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* ── Contact ── */}

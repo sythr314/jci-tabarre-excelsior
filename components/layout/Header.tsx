@@ -10,6 +10,8 @@ import { MobileDrawer } from "./MobileDrawer";
 const navLinks = [
   { href: "/", label: "Accueil" },
   { href: "/about", label: "À propos" },
+  { href: "/organisations", label: "Organisations OLM" },
+  { href: "/programmes", label: "Programmes & TOYP" },
   { href: "/initiatives", label: "Nos initiatives" },
   { href: "/contact", label: "Contact" },
 ];
@@ -32,13 +34,13 @@ export function Header() {
             </Link>
 
             {/* Nav desktop */}
-            <nav className="hidden md:flex items-center gap-1" aria-label="Navigation principale">
+            <nav className="hidden lg:flex items-center gap-1" aria-label="Navigation principale">
               {navLinks.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
                   className={cn(
-                    "px-4 py-2 rounded-lg text-sm font-medium font-heading transition-colors",
+                    "px-3 py-2 rounded-lg text-sm font-medium font-heading transition-colors",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan",
                     pathname === href
                       ? "text-cyan"
@@ -71,7 +73,7 @@ export function Header() {
 
               <button
                 onClick={() => setDrawerOpen(true)}
-                className="md:hidden p-2 rounded-lg text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
+                className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan"
                 aria-label="Ouvrir le menu"
                 aria-expanded={drawerOpen}
                 aria-controls="mobile-menu"

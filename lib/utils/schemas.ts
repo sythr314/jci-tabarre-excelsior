@@ -56,6 +56,7 @@ export const joinSchema = z.object({
       return age >= 18 && age <= 40;
     }, "Vous devez avoir entre 18 et 40 ans pour rejoindre JCI"),
   commune: z.string().min(2, "La commune de résidence est requise"),
+  localOrg: z.string().optional(),
   profession: z.string().optional(),
   educationLevel: z.string().optional(),
   interests: z
